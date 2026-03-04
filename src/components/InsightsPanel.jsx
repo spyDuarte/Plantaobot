@@ -1,51 +1,106 @@
 import { C } from "../constants/colors.js";
 import { SPECS } from "../data/mockData.js";
 import { fmt } from "../utils/index.js";
-import { GlassCard } from "./ui/index.jsx";
+import { Card } from "./ui/index.jsx";
 
-export default function InsightsPanel({captured,rejected,prefs}) {
-  const total=captured.reduce((a,s)=>a+s.val,0);
-  const matchRate=captured.length+rejected.length>0?Math.round(captured.length/(captured.length+rejected.length)*100):0;
-  const avgVal=captured.length>0?Math.round(total/captured.length):0;
-  const bySpec=SPECS.map(s=>({spec:s,count:captured.filter(x=>x.spec===s).length,total:captured.filter(x=>x.spec===s).reduce((a,x)=>a+x.val,0)})).filter(s=>s.count>0).sort((a,b)=>b.total-a.total);
-  const insights=[
-    captured.length===0&&{icon:"🎯",text:"Inicie o bot para gerar insights sobre seus plantões",color:C.cy},
-    captured.length>0&&avgVal>0&&{icon:"💰",text:"Seu ticket médio por plantão é R$ "+fmt(avgVal)+". "+( avgVal>2500?"Acima da média do mercado!":"Tente aumentar o valor mínimo para otimizar."),color:C.em},
-    matchRate>0&&{icon:"📊",text:"Taxa de match atual: "+matchRate+"%. "+(matchRate>60?"Seus filtros estão bem calibrados!":"Considere flexibilizar alguns critérios."),color:matchRate>60?C.em:C.am},
-    bySpec.length>0&&{icon:"🏆",text:"Sua especialidade mais lucrativa: "+bySpec[0].spec+" (R$ "+fmt(bySpec[0].total)+")",color:C.pu},
-    prefs.days.length<4&&{icon:"📅",text:"Você tem apenas "+prefs.days.length+" dias disponíveis. Mais disponibilidade = mais oportunidades.",color:C.am},
+export default function InsightsPanel({ captured, rejected, prefs }) {
+  const total = captured.reduce((sum, shift) => sum + shift.val, 0);
+  const matchRate = captured.length + rejected.length > 0 ? Math.round((captured.length / (captured.length + rejected.length)) * 100) : 0;
+  const avgValue = captured.length > 0 ? Math.round(total / captured.length) : 0;
+
+  const bySpec = SPECS.map((specialty) => ({
+    specialty,
+    count: captured.filter((item) => item.spec === specialty).length,
+    total: captured.filter((item) => item.spec === specialty).reduce((sum, item) => sum + item.val, 0),
+  }))
+    .filter((item) => item.count > 0)
+    .sort((a, b) => b.total - a.total);
+
+  const insights = [
+    captured.length === 0
+      ? { tone: C.info, text: "Inicie o bot para gerar insights com base em capturas reais." }
+      : null,
+    captured.length > 0
+      ? {
+          tone: C.success,
+          text:
+            avgValue > 2500
+              ? `Ticket medio atual: R$ ${fmt(avgValue)}. Acima da media esperada.`
+              : `Ticket medio atual: R$ ${fmt(avgValue)}. Avalie aumentar o valor minimo para elevar o retorno.`,
+        }
+      : null,
+    matchRate > 0
+      ? {
+          tone: matchRate > 60 ? C.success : C.warning,
+          text:
+            matchRate > 60
+              ? `Taxa de compatibilidade: ${matchRate}%. Filtros bem calibrados.`
+              : `Taxa de compatibilidade: ${matchRate}%. Considere ajustar filtros para melhorar volume.`,
+        }
+      : null,
+    bySpec.length > 0
+      ? {
+          tone: C.primary,
+          text: `Especialidade de maior retorno: ${bySpec[0].specialty} (R$ ${fmt(bySpec[0].total)}).`,
+        }
+      : null,
+    prefs.days.length < 4
+      ? { tone: C.warning, text: `Disponibilidade atual em ${prefs.days.length} dias. Mais dias aumentam chances de captura.` }
+      : null,
   ].filter(Boolean);
 
   return (
-    <div>
-      <div style={{fontSize:20,fontWeight:800,color:C.tx0,letterSpacing:"-.5px",marginBottom:4}}>Insights</div>
-      <div style={{fontSize:11,color:C.tx2,marginBottom:16}}>Análise inteligente do seu perfil</div>
-      {insights.length===0&&<GlassCard style={{textAlign:"center",padding:"40px 20px"}}><div style={{fontSize:11,color:C.tx2}}>Inicie o bot para ver insights</div></GlassCard>}
-      {insights.map((ins,i)=>(
-        <GlassCard key={i} style={{marginBottom:10,padding:"14px 16px",animation:"fadeUp .4s "+(i*.08)+"s both"}}>
-          <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-            <div style={{width:36,height:36,borderRadius:10,background:ins.color+"18",border:"1px solid "+ins.color+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{ins.icon}</div>
-            <div style={{fontSize:12,color:C.tx1,lineHeight:1.6}}>{ins.text}</div>
+    <Card>
+      <div style={{ marginBottom: 9, fontSize: 12, color: C.text2, fontWeight: 700 }}>Destaques inteligentes</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {insights.map((insight, index) => (
+          <div
+            key={`${insight.text}-${index}`}
+            style={{
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              padding: "10px 12px",
+              background: "#fff",
+              borderLeft: `3px solid ${insight.tone}`,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: C.text1,
+            }}
+          >
+            {insight.text}
           </div>
-        </GlassCard>
-      ))}
-      {bySpec.length>0&&(
-        <GlassCard style={{marginTop:12}}>
-          <div style={{fontSize:10,color:C.tx2,fontWeight:700,letterSpacing:1.2,marginBottom:12}}>GANHOS POR ESPECIALIDADE</div>
-          {bySpec.map((s,i)=>{
-            const pct=bySpec[0].total>0?Math.round(s.total/bySpec[0].total*100):0;
-            return <div key={s.spec} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
-                <span style={{color:C.tx1,fontWeight:600}}>{s.spec}</span>
-                <span style={{color:C.em,fontWeight:800,fontFamily:"monospace"}}>R$ {fmt(s.total)}</span>
+        ))}
+      </div>
+
+      {bySpec.length > 0 ? (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 12, color: C.text2, marginBottom: 8, fontWeight: 700 }}>Ganhos por especialidade</div>
+          {bySpec.map((item, index) => {
+            const percentage = bySpec[0].total > 0 ? Math.round((item.total / bySpec[0].total) * 100) : 0;
+            return (
+              <div key={item.specialty} style={{ marginBottom: 9 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                  <span style={{ color: C.text1 }}>{item.specialty}</span>
+                  <span className="pb-mono" style={{ color: C.success, fontWeight: 700 }}>
+                    R$ {fmt(item.total)}
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: C.surface2, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${percentage}%`,
+                      height: "100%",
+                      borderRadius: 999,
+                      background: "linear-gradient(90deg, #0b5fff, #2278a6)",
+                      transition: `width .45s ${index * 0.05}s ease`,
+                    }}
+                  />
+                </div>
               </div>
-              <div style={{height:4,background:C.bd,borderRadius:100}}>
-                <div style={{width:pct+"%",height:"100%",background:"linear-gradient(90deg,"+C.em+","+C.cy+")",borderRadius:100,transition:"width .6s "+(i*.1)+"s ease"}}/>
-              </div>
-            </div>;
+            );
           })}
-        </GlassCard>
-      )}
-    </div>
+        </div>
+      ) : null}
+    </Card>
   );
 }

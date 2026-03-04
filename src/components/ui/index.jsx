@@ -45,21 +45,35 @@ export function GlassCard({children,style={},glow=false,onClick,hover=false}) {
 export function Counter({value,prefix="",suffix="",color=C.em}) {
   const [disp,setDisp]=useState(0);
   const ref=useRef(null);
+  const prev=useRef(0);
+
   useEffect(()=>{
     if(ref.current) clearInterval(ref.current);
-    const start=disp; const diff=value-start; const dur=800; const fps=40;
+    const start=prev.current;
+    const diff=value-start;
+    const dur=800;
+    const fps=40;
     const step=diff/((dur/1000)*fps);
     let cur=start;
+
     ref.current=setInterval(()=>{
       cur+=step;
-      if((step>0&&cur>=value)||(step<0&&cur<=value)){setDisp(value);clearInterval(ref.current);}
-      else setDisp(Math.round(cur));
+      if((step>0&&cur>=value)||(step<0&&cur<=value)){
+        setDisp(value);
+        prev.current=value;
+        clearInterval(ref.current);
+      } else {
+        const rounded=Math.round(cur);
+        setDisp(rounded);
+        prev.current=rounded;
+      }
     },1000/fps);
+
     return ()=>clearInterval(ref.current);
   },[value]);
+
   return <span style={{color,fontFamily:"'JetBrains Mono',monospace",fontWeight:800}}>{prefix}{fmt(disp)}{suffix}</span>;
 }
-
 export function Confetti({active}) {
   if(!active) return null;
   const cols=[C.em,C.cy,C.pu,C.am,"#f472b6","#60a5fa"];
@@ -121,3 +135,21 @@ export function BgOrbs() {
     <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"linear-gradient("+C.bd+" 1px,transparent 1px),linear-gradient(90deg,"+C.bd+" 1px,transparent 1px)",backgroundSize:"44px 44px",maskImage:"radial-gradient(ellipse 80% 80% at 50% 40%,black 30%,transparent 100%)"}}/>
   </div>;
 }
+
+export {
+  Badge,
+  Button,
+  Card,
+  Drawer,
+  EmptyState,
+  Input,
+  Modal,
+  PageHeader,
+  Select,
+  Tabs,
+  ToastViewport,
+} from "./primitives.jsx";
+
+
+
+

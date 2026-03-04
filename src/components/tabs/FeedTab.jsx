@@ -1,46 +1,108 @@
 import { C } from "../../constants/colors.js";
-import { GlassCard, Av, Pill, ScBar } from "../ui/index.jsx";
+import { Av, Badge, Button, Card, EmptyState, PageHeader, Pill, ScBar } from "../ui/index.jsx";
 
-export default function FeedTab({botOn,feed,typing,setModal,feedRef}) {
+export default function FeedTab({ uiV2, botOn, feed, typing, setModal, feedRef }) {
   return (
-    <div style={{animation:"fadeUp .35s both"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <div><div style={{fontSize:20,fontWeight:800,color:C.tx0,letterSpacing:"-.5px"}}>Feed ao Vivo</div><div style={{fontSize:11,color:C.tx2,marginTop:2}}>Mensagens monitoradas dos grupos</div></div>
-        {botOn&&<div style={{display:"flex",alignItems:"center",gap:6,background:C.emA,border:"1px solid "+C.em+"44",borderRadius:20,padding:"5px 11px"}}>
-          <div style={{width:5,height:5,borderRadius:"50%",background:C.em,animation:"dotP 1.5s infinite"}}/>
-          <span style={{fontSize:9,fontWeight:800,color:C.em}}>AO VIVO</span>
-        </div>}
-      </div>
-      {typing&&<GlassCard style={{padding:"8px 14px",marginBottom:9,borderColor:C.cy+"33"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:11,color:C.cy}}>{typing}</span>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:C.cy,animation:"bounce .7s "+(i*.15)+"s infinite"}}/>)}</div>
-      </GlassCard>}
-      <div ref={feedRef} style={{display:"flex",flexDirection:"column",gap:8,maxHeight:560,overflowY:"auto"}}>
-        {feed.length===0
-          ?<GlassCard style={{textAlign:"center",padding:"50px 20px"}}><div style={{fontSize:36,marginBottom:10}}>💬</div><div style={{fontSize:13,fontWeight:700,color:C.tx1}}>Aguardando mensagens</div><div style={{fontSize:11,color:C.tx2,marginTop:3}}>Inicie o bot no Dashboard</div></GlassCard>
-          :feed.map(msg=>{
-            const bc=msg.isOffer?(msg.ok===true?C.em:msg.ok===false?C.rd:C.cy):C.bd;
-            return <GlassCard key={msg.id} glow={msg.ok===true} style={{borderColor:bc+"44",padding:"12px 14px",animation:"fadeUp .3s both"}}>
-              <div style={{display:"flex",gap:9,marginBottom:msg.isOffer?9:0}}>
-                <Av l={msg.av}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",justifyContent:"space-between"}}>
-                    <div><span style={{fontSize:12,fontWeight:700,color:C.tx0}}>{msg.sender}</span><span style={{fontSize:10,color:C.tx2,marginLeft:7}}>{msg.group}</span></div>
-                    <span style={{fontSize:9,color:C.tx2,fontFamily:"monospace"}}>{msg.ts}</span>
+    <div style={{ animation: "fadeUp .25s both" }}>
+      {uiV2 ? (
+        <PageHeader
+          title="Feed monitorado"
+          subtitle="Mensagens analisadas dos grupos conectados"
+          action={botOn ? <Badge tone="success">Ao vivo</Badge> : <Badge tone="warning">Pausado</Badge>}
+        />
+      ) : null}
+
+      {typing ? (
+        <Card muted style={{ marginBottom: 8, borderColor: "rgba(34, 120, 166, 0.24)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: C.info }}>
+            <strong>{typing}</strong>
+            <span>[digitando]</span>
+          </div>
+        </Card>
+      ) : null}
+
+      <div ref={feedRef} style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 620, overflowY: "auto" }}>
+        {feed.length === 0 ? (
+          <Card>
+            <EmptyState
+              icon="F"
+              title="Nenhuma mensagem ainda"
+              description={botOn ? "Monitoramento ativo. Novas mensagens aparecerao em instantes." : "Inicie o bot para popular o feed."}
+            />
+          </Card>
+        ) : (
+          feed.map((message) => {
+            const borderColor =
+              message.isOffer && message.ok === true
+                ? "rgba(15, 159, 111, 0.34)"
+                : message.isOffer && message.ok === false
+                  ? "rgba(201, 62, 74, 0.34)"
+                  : "rgba(34, 120, 166, 0.26)";
+
+            return (
+              <Card key={message.id} style={{ borderColor }}>
+                <div style={{ display: "flex", gap: 10, marginBottom: message.isOffer ? 8 : 0 }}>
+                  <Av l={message.av} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                      <div>
+                        <strong style={{ fontSize: 12, color: C.text0 }}>{message.sender}</strong>
+                        <div style={{ marginTop: 1, fontSize: 11, color: C.text2 }}>{message.group}</div>
+                      </div>
+                      <span className="pb-mono" style={{ fontSize: 11, color: C.text2 }}>
+                        {message.ts}
+                      </span>
+                    </div>
+
+                    {!message.isOffer ? (
+                      <p style={{ margin: "4px 0 0", fontSize: 12, color: C.text1 }}>{message.text}</p>
+                    ) : null}
                   </div>
-                  {!msg.isOffer&&<div style={{fontSize:11,color:C.tx2,marginTop:3,fontStyle:"italic"}}>{msg.text}</div>}
                 </div>
-              </div>
-              {msg.isOffer&&<>
-                <div style={{background:"rgba(0,0,0,.5)",borderRadius:9,padding:"8px 11px",marginBottom:8,fontFamily:"monospace",fontSize:10,color:C.tx2,whiteSpace:"pre-wrap",lineHeight:1.7,borderLeft:"2px solid "+bc+"44"}}>{msg.rawMsg}</div>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                  {msg.state==="scanning"
-                    ?<div style={{display:"flex",alignItems:"center",gap:8,fontSize:11,color:C.cy}}><div style={{width:11,height:11,border:"2px solid "+C.cy,borderTop:"2px solid transparent",borderRadius:"50%",animation:"spin .6s linear infinite"}}/>Analisando...</div>
-                    :<div style={{display:"flex",alignItems:"center",gap:8,flex:1}}><Pill sc={msg.sc}/><div style={{flex:1}}><ScBar sc={msg.sc}/></div></div>}
-                  {msg.state==="done"&&<button onClick={()=>setModal(msg)} style={{fontSize:10,color:C.cy,background:"none",border:"none",cursor:"pointer",fontWeight:700,flexShrink:0}}>detalhes →</button>}
-                </div>
-              </>}
-            </GlassCard>;
-          })}
+
+                {message.isOffer ? (
+                  <>
+                    <pre
+                      style={{
+                        margin: "0 0 8px",
+                        borderRadius: 10,
+                        border: `1px solid ${C.border}`,
+                        background: C.surface2,
+                        padding: "8px 10px",
+                        fontSize: 11,
+                        color: C.text1,
+                        whiteSpace: "pre-wrap",
+                        lineHeight: 1.5,
+                        fontFamily: "'IBM Plex Mono', monospace",
+                      }}
+                    >
+                      {message.rawMsg}
+                    </pre>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      {message.state === "scanning" ? (
+                        <Badge tone="info">Analisando</Badge>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flex: 1 }}>
+                          <Pill sc={message.sc} />
+                          <div style={{ flex: 1 }}>
+                            <ScBar sc={message.sc} />
+                          </div>
+                        </div>
+                      )}
+
+                      {message.state === "done" ? (
+                        <Button type="button" variant="secondary" onClick={() => setModal(message)}>
+                          Detalhes
+                        </Button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
+              </Card>
+            );
+          })
+        )}
       </div>
     </div>
   );

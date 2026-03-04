@@ -1,82 +1,156 @@
 import { C } from "../../constants/colors.js";
 import { fmt } from "../../utils/index.js";
-import { GlassCard, Counter, Waveform } from "../ui/index.jsx";
+import { Badge, Button, Card, PageHeader, Waveform } from "../ui/index.jsx";
 
-export default function Dashboard({setTab,botOn,startBot,stopBot,captured,rejected,pending,actG,total,prefs,typing,setModal}) {
+function StatCard({ label, value, tone = "info" }) {
+  const toneMap = {
+    info: { border: "rgba(34, 120, 166, 0.24)", bg: C.infoSoft, color: C.info },
+    success: { border: "rgba(15, 159, 111, 0.24)", bg: C.successSoft, color: C.success },
+    warning: { border: "rgba(201, 122, 20, 0.24)", bg: C.warningSoft, color: C.warning },
+    error: { border: "rgba(201, 62, 74, 0.24)", bg: C.errorSoft, color: C.error },
+  };
+  const colors = toneMap[tone] || toneMap.info;
+
   return (
-    <div style={{animation:"fadeUp .35s both"}}>
-      <div style={{marginBottom:16}}>
-        <div style={{fontSize:11,color:C.tx2,fontWeight:700,letterSpacing:1.2,marginBottom:4}}>TOTAL GARANTIDO</div>
-        <div style={{fontSize:40,fontWeight:800,letterSpacing:"-2px",lineHeight:1,background:"linear-gradient(90deg,"+C.em+","+C.cy+")",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>
-          <Counter value={total} prefix="R$ "/>
+    <Card muted style={{ borderColor: colors.border, background: colors.bg, padding: 12 }}>
+      <div style={{ fontSize: 11, color: C.text2 }}>{label}</div>
+      <div className="pb-mono" style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: colors.color }}>
+        {value}
+      </div>
+    </Card>
+  );
+}
+
+export default function Dashboard({
+  uiV2,
+  setTab,
+  botOn,
+  startBot,
+  stopBot,
+  captured,
+  rejected,
+  pending,
+  actG,
+  total,
+  prefs,
+  typing,
+  setModal,
+}) {
+  const action = (
+    <Button type="button" variant={botOn ? "danger" : "primary"} onClick={botOn ? stopBot : startBot}>
+      {botOn ? "Parar bot" : "Iniciar bot"}
+    </Button>
+  );
+
+  return (
+    <div style={{ animation: "fadeUp .25s both" }}>
+      {uiV2 ? (
+        <PageHeader
+          title="Dashboard operacional"
+          subtitle="Visao consolidada de capturas e monitoramento em tempo real"
+          action={action}
+        />
+      ) : null}
+
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, color: C.text2, fontWeight: 600 }}>Total garantido</div>
+          <Badge tone={botOn ? "success" : "warning"}>{botOn ? "Monitorando" : "Pausado"}</Badge>
         </div>
+        <div className="pb-mono" style={{ fontSize: 34, fontWeight: 700, color: C.primary }}>
+          R$ {fmt(total)}
+        </div>
+      </Card>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8, marginBottom: 12 }}>
+        <StatCard label="Analisados" value={captured.length + rejected.length} tone="info" />
+        <StatCard label="Capturados" value={captured.length} tone="success" />
+        <StatCard label="Pendentes" value={pending.length} tone="warning" />
+        <StatCard label="Descartados" value={rejected.length} tone="error" />
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:9,marginBottom:14}}>
-        {[{l:"Analisados",v:captured.length+rejected.length,c:C.cy,i:"🔍"},{l:"Capturados",v:captured.length,c:C.em,i:"✅"},{l:"Pendentes",v:pending.length,c:C.am,i:"🃏"},{l:"Recusados",v:rejected.length,c:C.rd,i:"✗"}].map(s=>(
-          <GlassCard key={s.l} style={{padding:"14px 14px",display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:38,height:38,borderRadius:10,background:s.c+"18",border:"1px solid "+s.c+"33",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{s.i}</div>
-            <div>
-              <div style={{fontSize:22,fontWeight:800,color:s.c,fontFamily:"monospace",lineHeight:1}}><Counter value={s.v} color={s.c}/></div>
-              <div style={{fontSize:10,color:C.tx2,marginTop:2,fontWeight:700,letterSpacing:.2}}>{s.l}</div>
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>Status do monitoramento</div>
+            <div style={{ marginTop: 3, fontSize: 12, color: C.text1 }}>
+              {botOn
+                ? `Escaneando ${actG.length} grupos no modo ${prefs.auto ? "automatico" : "manual"}`
+                : `${actG.length} grupos ativos e prontos para iniciar`}
             </div>
-          </GlassCard>
-        ))}
-      </div>
+          </div>
+          {botOn ? <Waveform active /> : <Badge tone="warning">Inativo</Badge>}
+        </div>
 
-      <GlassCard glow={botOn} style={{marginBottom:12,transition:"all .4s"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div style={{flex:1}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-              {botOn?<Waveform active/>:<div style={{width:8,height:8,borderRadius:"50%",background:C.bd}}/>}
-              <div style={{fontSize:14,fontWeight:800,color:C.tx0}}>Monitoramento WhatsApp</div>
-            </div>
-            <div style={{fontSize:11,color:C.tx2,marginLeft:botOn?20:16,marginBottom:botOn?12:0}}>
-              {botOn?"Escaneando "+actG.length+" grupos · modo "+(prefs.auto?"automático":"swipe"):actG.length+" grupos prontos · clique em Iniciar"}
-            </div>
-            {botOn&&actG.map(g=>(
-              <div key={g.id} style={{display:"flex",alignItems:"center",gap:8,background:C.emB,border:"1px solid "+C.em+"18",borderRadius:9,padding:"6px 11px",marginBottom:5}}>
-                <div style={{width:5,height:5,borderRadius:"50%",background:C.em,animation:"dotP 2s infinite"}}/>
-                <span style={{fontSize:11,color:C.tx1,flex:1}}>{g.emoji} {g.name}</span>
-                {typing===g.name?<span style={{fontSize:9,color:C.cy,fontWeight:700,display:"flex",alignItems:"center",gap:3}}>digitando {[0,1,2].map(i=><div key={i} style={{width:4,height:4,borderRadius:"50%",background:C.cy,animation:"bounce .7s "+(i*.15)+"s infinite"}}/>)}</span>:<span style={{fontSize:9,color:C.em,fontWeight:800}}>●</span>}
+        {botOn ? (
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+            {actG.map((group) => (
+              <div
+                key={group.id}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  border: `1px solid ${C.border}`,
+                  background: C.surface2,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: 12 }}>{group.emoji} {group.name}</span>
+                <span style={{ fontSize: 11, color: typing === group.name ? C.info : C.success, fontWeight: 600 }}>
+                  {typing === group.name ? "Digitando..." : "Ativo"}
+                </span>
               </div>
             ))}
           </div>
-          <div style={{fontSize:30,marginLeft:14,animation:botOn?"float 3s ease-in-out infinite":""}}>{botOn?"🤖":"😴"}</div>
-        </div>
-      </GlassCard>
+        ) : null}
+      </Card>
 
-      <GlassCard style={{marginBottom:12}}>
-        <div style={{fontSize:10,color:C.tx2,fontWeight:700,letterSpacing:1.2,marginBottom:14}}>COMO FUNCIONA</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
-          {[["💬","1. Detecta","NLP identifica ofertas de plantão em tempo real"],["🧠","2. Analisa","Compara valor, distância, especialidade, dia"],["⚡","3. Responde","0.8s — antes de qualquer outro médico"],["🤖","4. IA advisa","Claude analisa seu perfil e sugere estratégias"]].map(([ic,t,d])=>(
-            <div key={t} style={{background:"rgba(255,255,255,0.03)",border:"1px solid "+C.bd,borderRadius:11,padding:"12px 13px"}}>
-              <div style={{fontSize:18,marginBottom:6}}>{ic}</div>
-              <div style={{fontSize:12,fontWeight:700,color:C.tx0,marginBottom:2}}>{t}</div>
-              <div style={{fontSize:11,color:C.tx2,lineHeight:1.5}}>{d}</div>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-
-      {captured.length>0&&<GlassCard style={{marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <div style={{fontSize:10,color:C.tx2,fontWeight:700,letterSpacing:1.2}}>ÚLTIMOS CAPTURADOS</div>
-          <button onClick={()=>setTab(prefs.auto?"captured":"swipe")} style={{fontSize:11,color:C.cy,background:"none",border:"none",cursor:"pointer",fontWeight:700}}>ver todos →</button>
-        </div>
-        {captured.slice(-3).reverse().map(s=>(
-          <div key={s.id} onClick={()=>setModal(s)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.emB,border:"1px solid "+C.em+"22",borderRadius:11,padding:"10px 13px",marginBottom:6,cursor:"pointer"}}>
-            <div><div style={{fontSize:13,fontWeight:700,color:C.tx0}}>{s.hospital}</div><div style={{fontSize:10,color:C.tx2,marginTop:1}}>{s.date} · {s.spec}</div></div>
-            <div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:800,color:C.em,fontFamily:"monospace"}}>R$ {fmt(s.val)}</div><div style={{fontSize:9,color:C.tx2}}>{s.capturedAt}</div></div>
+      {captured.length > 0 ? (
+        <Card style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <strong style={{ fontSize: 13 }}>Ultimos capturados</strong>
+            <Button type="button" variant="secondary" onClick={() => setTab(prefs.auto ? "captured" : "swipe")}>Ver todos</Button>
           </div>
-        ))}
-      </GlassCard>}
 
-      <button onClick={botOn?stopBot:startBot}
-        style={{width:"100%",padding:"14px",background:botOn?C.rdA:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"1px solid "+(botOn?C.rd+"44":"transparent"),borderRadius:16,color:botOn?C.rd:"#021810",fontSize:14,fontWeight:800,cursor:"pointer",letterSpacing:.2,boxShadow:botOn?"":("0 6px 28px "+C.emA)}}>
-        {botOn?"⏹ Parar simulação":"▶ Simular bot ao vivo (30s)"}
-      </button>
-      <div style={{textAlign:"center",fontSize:10,color:C.tx2,marginTop:6}}>7 grupos · 7 ofertas · modo {prefs.auto?"automático":"swipe"}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {captured
+              .slice(-3)
+              .reverse()
+              .map((shift) => (
+                <button
+                  key={shift.id}
+                  type="button"
+                  onClick={() => setModal(shift)}
+                  style={{
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 10,
+                    background: "#fff",
+                    padding: "10px 12px",
+                    textAlign: "left",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>
+                    <strong style={{ fontSize: 12, color: C.text0 }}>{shift.hospital}</strong>
+                    <span style={{ display: "block", marginTop: 2, fontSize: 11, color: C.text2 }}>
+                      {shift.date} - {shift.spec}
+                    </span>
+                  </span>
+                  <span className="pb-mono" style={{ fontSize: 14, color: C.success, fontWeight: 700 }}>
+                    R$ {fmt(shift.val)}
+                  </span>
+                </button>
+              ))}
+          </div>
+        </Card>
+      ) : null}
+
+      {!uiV2 ? action : null}
     </div>
   );
 }
