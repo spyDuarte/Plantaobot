@@ -100,3 +100,32 @@ Em PRs, a CI valida automaticamente lint e testes.
 
 - Node.js 18+
 - npm 9+
+
+## Deploy no GitHub Pages
+
+O projeto já está preparado para deploy automático via GitHub Actions.
+
+1. Faça push para a branch `main` (ou `master`).
+2. No GitHub, abra `Settings -> Pages` e selecione `Build and deployment: GitHub Actions`.
+3. Aguarde o workflow `Deploy to GitHub Pages` finalizar.
+
+A URL ficará em:
+
+- `https://<seu-usuario>.github.io/<nome-do-repositorio>/` (Project Page)
+- `https://<seu-usuario>.github.io/` (User/Org Page, quando o repo termina com `.github.io`)
+
+### Deploy local (simulação do Pages)
+
+```bash
+npm install
+npm run build
+npm run preview
+```
+
+Opcional para forçar `base` manualmente:
+
+```bash
+# PowerShell
+$env:VITE_BASE_PATH='/MeuRepo/'
+npm run build
+```
