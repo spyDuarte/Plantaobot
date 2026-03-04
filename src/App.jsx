@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { C } from "./constants/colors.js";
-import { SHIFTS, NOISE, MONTHLY, GROUPS } from "./data/mockData.js";
+import { MONTHLY, GROUPS } from "./data/mockData.js";
 import { fmt, nowT, calcScore } from "./utils/index.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { CSS } from "./styles/index.js";
@@ -29,6 +29,111 @@ import AIChat from "./components/AIChat.jsx";
 import { getFeatureFlags } from "./config/featureFlags.js";
 import { createNotification, createNavItem, createToast } from "./models/uiModels.js";
 import { normalizeShiftCollection } from "./utils/shiftViewModel.js";
+import {
+  fetchMonitorStatus,
+  startMonitoring,
+  stopMonitoring,
+  fetchFeed,
+  fetchCapturedOffers,
+  fetchRejectedOffers,
+  captureOffer,
+  rejectOffer,
+  fetchPreferences,
+  savePreferences,
+  fetchGroups,
+  saveGroups,
+  clearHistory,
+} from "./services/monitoringApi.js";
+
+const DEFAULT_PREFS = {
+  minVal: 1500,
+  maxDist: 20,
+  days: ["Sex", "Sáb", "Dom"],
+  specs: ["Emergência", "UTI", "Clínica Geral"],
+  auto: true,
+};
+
+const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const POLL_MS = Number(import.meta.env.VITE_MONITOR_POLL_MS || 10000);
+
+function normalizePrefs(input) {
+  if (!input || typeof input !== "object") {
+    return DEFAULT_PREFS;
+  }
+
+  return {
+    minVal: Number(input.minVal ?? DEFAULT_PREFS.minVal),
+    maxDist: Number(input.maxDist ?? DEFAULT_PREFS.maxDist),
+    days: Array.isArray(input.days) && input.days.length > 0 ? input.days : DEFAULT_PREFS.days,
+    specs: Array.isArray(input.specs) && input.specs.length > 0 ? input.specs : DEFAULT_PREFS.specs,
+    auto: typeof input.auto === "boolean" ? input.auto : DEFAULT_PREFS.auto,
+  };
+}
+
+function toMonthKey(date) {
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function parseCaptureDate(shift) {
+  const candidates = [
+    shift?.capturedAtISO,
+    shift?.capturedAt,
+    shift?.createdAt,
+    shift?.ts,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    const parsed = new Date(candidate);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return new Date();
+}
+
+function buildMonthlySeries(capturedList) {
+  const now = new Date();
+  const buckets = [];
+
+  for (let offset = 5; offset >= 0; offset -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+    buckets.push({
+      key: toMonthKey(date),
+      m: MONTH_LABELS[date.getMonth()],
+      v: 0,
+    });
+  }
+
+  const indexByKey = new Map(buckets.map((item, index) => [item.key, index]));
+
+  capturedList.forEach((shift) => {
+    const date = parseCaptureDate(shift);
+    const key = toMonthKey(date);
+    const targetIndex = indexByKey.get(key);
+    if (targetIndex != null) {
+      buckets[targetIndex].v += Number(shift.val ?? 0);
+    }
+  });
+
+  return buckets.map(({ m, v }) => ({ m, v }));
+}
+
+function appendUniqueById(list, item) {
+  if (!item) {
+    return list;
+  }
+
+  if (list.some((entry) => entry.id === item.id)) {
+    return list;
+  }
+
+  return [...list, item];
+}
 
 export default function App() {
   const [screen, setScreen] = useLocalStorage("pb_screen", "onboard");
@@ -49,26 +154,22 @@ export default function App() {
   const [groups, setGroups] = useLocalStorage("pb_groups", GROUPS);
   const [monthly, setMonthly] = useState(MONTHLY);
   const [feedError, setFeedError] = useState(null);
-  const [prefs, setPrefs] = useLocalStorage("pb_prefs", {
-    minVal: 1500,
-    maxDist: 20,
-    days: ["Sex", "Sáb", "Dom"],
-    specs: ["Emergência", "UTI", "Clínica Geral"],
-    auto: true,
-  });
+  const [apiLoading, setApiLoading] = useState(false);
+  const [prefs, setPrefs] = useLocalStorage("pb_prefs", DEFAULT_PREFS);
 
   const flags = getFeatureFlags();
   const uiV2 = flags.ui_v2;
 
-  const timers = useRef([]);
   const feedRef = useRef(null);
   const tid = useRef(0);
   const nid = useRef(0);
-
-  const clearAllTimers = useCallback(() => {
-    timers.current.forEach(clearTimeout);
-    timers.current = [];
-  }, []);
+  const monitorSessionIdRef = useRef(null);
+  const pollTimerRef = useRef(null);
+  const pollCursorRef = useRef(null);
+  const pollInFlightRef = useRef(false);
+  const processedOffersRef = useRef(new Set());
+  const prefsSyncReadyRef = useRef(false);
+  const groupsSyncReadyRef = useRef(false);
 
   const toast = useCallback((title, message, severity = "success", source = "system") => {
     const id = ++tid.current;
@@ -100,139 +201,341 @@ export default function App() {
     setNotifs((previous) => [...previous, notification]);
   }, []);
 
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const mergeFeed = useCallback((items) => {
+    setFeed((previous) => {
+      const next = [...previous];
+      const indexById = new Map(next.map((item, index) => [item.id, index]));
+
+      items.forEach((item) => {
+        const existingIndex = indexById.get(item.id);
+        if (existingIndex == null) {
+          next.push(item);
+          indexById.set(item.id, next.length - 1);
+          return;
+        }
+
+        next[existingIndex] = {
+          ...next[existingIndex],
+          ...item,
+        };
+      });
+
+      return next.slice(-250);
+    });
+  }, []);
+
+  const registerCapture = useCallback((shift, { fromAuto = false } = {}) => {
+    const nowIso = new Date().toISOString();
+    const normalizedShift = {
+      ...shift,
+      capturedAt: shift.capturedAt || nowT(),
+      capturedAtISO: shift.capturedAtISO || nowIso,
+    };
+
+    setCaptured((previous) => appendUniqueById(previous, normalizedShift));
+    setPending((previous) => previous.filter((item) => item.id !== shift.id));
+
+    if (fromAuto) {
+      addNotif(
+        "Plantão capturado",
+        `${shift.hospital} - ${shift.date} - R$ ${fmt(shift.val)}`,
+        "success",
+        "bot",
+      );
+      toast("Plantão garantido", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "bot");
+    } else {
+      toast("Plantão aceito", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "manual");
+    }
+
+    if (Number(shift.val) >= 3000) {
+      setConfetti(true);
+      setTimeout(() => setConfetti(false), 2500);
+    }
+  }, [addNotif, toast, setCaptured, setPending]);
+
+  const processOffer = useCallback(async (offer) => {
+    if (!offer?.id || processedOffersRef.current.has(offer.id)) {
+      return;
+    }
+
+    processedOffersRef.current.add(offer.id);
+
+    const result = calcScore(offer, prefs);
+    const scoredOffer = {
+      ...offer,
+      state: "done",
+      sc: result.s,
+      ok: result.s >= 60,
+    };
+
+    mergeFeed([scoredOffer]);
+
+    if (prefs.auto) {
+      if (scoredOffer.ok) {
+        try {
+          const persisted = await captureOffer(scoredOffer, {
+            sessionId: monitorSessionIdRef.current,
+            source: "auto",
+          });
+          registerCapture({ ...scoredOffer, ...persisted }, { fromAuto: true });
+        } catch (error) {
+          setPending((previous) => appendUniqueById(previous, scoredOffer));
+          toast("Falha na captura", error.message || "Não foi possível capturar o plantão automaticamente.", "warning", "bot");
+        }
+      } else {
+        setRejected((previous) => appendUniqueById(previous, scoredOffer));
+        try {
+          await rejectOffer(scoredOffer, {
+            sessionId: monitorSessionIdRef.current,
+            reason: "score_below_threshold",
+          });
+        } catch {
+          // Rejeição já refletida localmente.
+        }
+      }
+      return;
+    }
+
+    if (scoredOffer.ok) {
+      setPending((previous) => appendUniqueById(previous, scoredOffer));
+    } else {
+      setRejected((previous) => appendUniqueById(previous, scoredOffer));
+      try {
+        await rejectOffer(scoredOffer, {
+          sessionId: monitorSessionIdRef.current,
+          reason: "score_below_threshold",
+        });
+      } catch {
+        // Rejeição já refletida localmente.
+      }
+    }
+  }, [mergeFeed, prefs, registerCapture, toast]);
+
+  const pollFeed = useCallback(async () => {
+    if (!botOn || pollInFlightRef.current) {
+      return;
+    }
+
+    pollInFlightRef.current = true;
+    try {
+      const response = await fetchFeed({
+        cursor: pollCursorRef.current,
+        sessionId: monitorSessionIdRef.current,
+        groupIds: groups.filter((group) => group.active).map((group) => group.id),
+      });
+
+      if (response.cursor) {
+        pollCursorRef.current = response.cursor;
+      }
+
+      if (!response.items.length) {
+        return;
+      }
+
+      const feedItems = response.items.map((item) => {
+        if (!item.isOffer) {
+          return {
+            ...item,
+            state: item.state || "done",
+          };
+        }
+
+        return {
+          ...item,
+          state: item.state || "scanning",
+        };
+      });
+
+      mergeFeed(feedItems);
+
+      const lastItem = feedItems[feedItems.length - 1];
+      setTyping(lastItem.group);
+      setTimeout(() => setTyping(null), 900);
+
+      for (const item of feedItems) {
+        if (item.isOffer) {          await processOffer(item);
+        }
+      }
+    } catch (error) {
+      const message = error?.message || "Falha ao consultar o feed em tempo real.";
+      setFeedError(message);
+      toast("Erro no monitoramento", message, "error", "system");
+    } finally {
+      pollInFlightRef.current = false;
+    }
+  }, [botOn, groups, mergeFeed, processOffer, toast]);
+
+  const startPolling = useCallback(() => {
+    stopPolling();
+    pollFeed();
+    pollTimerRef.current = setInterval(() => {
+      pollFeed();
+    }, POLL_MS);
+  }, [pollFeed, stopPolling]);
+
+  const loadBootData = useCallback(async () => {
+    setApiLoading(true);
+    setFeedError(null);
+
+    try {
+      const [monitorStatus, remotePrefs, remoteGroups, remoteCaptured, remoteRejected] = await Promise.all([
+        fetchMonitorStatus(),
+        fetchPreferences(),
+        fetchGroups(),
+        fetchCapturedOffers(),
+        fetchRejectedOffers(),
+      ]);
+
+      if (remotePrefs) {
+        setPrefs(normalizePrefs(remotePrefs));
+      }
+
+      if (Array.isArray(remoteGroups) && remoteGroups.length > 0) {
+        setGroups(remoteGroups);
+      }
+
+      if (Array.isArray(remoteCaptured)) {
+        setCaptured(remoteCaptured);
+      }
+
+      if (Array.isArray(remoteRejected)) {
+        setRejected(remoteRejected);
+      }
+
+      monitorSessionIdRef.current = monitorStatus.sessionId;
+      setBotOn(Boolean(monitorStatus.active));
+
+      if (monitorStatus.active) {
+        startPolling();
+      }
+    } catch (error) {
+      const message = error?.message || "Não foi possível inicializar os dados reais do monitoramento.";
+      setFeedError(message);
+      toast("API indisponível", message, "warning", "system");
+    } finally {
+      setApiLoading(false);
+      prefsSyncReadyRef.current = true;
+      groupsSyncReadyRef.current = true;
+    }
+  }, [setCaptured, setGroups, setPrefs, startPolling, toast]);
+
+  useEffect(() => {
+    loadBootData();
+    return () => stopPolling();
+  }, [loadBootData, stopPolling]);
+
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTop = 99999;
     }
   }, [feed]);
 
-  useEffect(() => () => clearAllTimers(), [clearAllTimers]);
+  useEffect(() => {
+    setMonthly(buildMonthlySeries(captured));
+  }, [captured]);
 
-  function startBot() {
+  useEffect(() => {
+    if (!prefsSyncReadyRef.current) {
+      return undefined;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        await savePreferences(prefs);
+      } catch (error) {
+        toast("Falha ao salvar filtros", error?.message || "Não foi possível persistir preferências.", "warning", "system");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [prefs, toast]);
+
+  useEffect(() => {
+    if (!groupsSyncReadyRef.current) {
+      return undefined;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        await saveGroups(groups);
+      } catch (error) {
+        toast("Falha ao salvar grupos", error?.message || "Não foi possível persistir grupos ativos.", "warning", "system");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [groups, toast]);
+
+  async function startBot() {
     setFeedError(null);
-    setBotOn(true);
-    setFeed([]);
-    setCaptured([]);
-    setRejected([]);
+    processedOffersRef.current = new Set();
+    pollCursorRef.current = null;
     setPending([]);
-    setMonthly(MONTHLY);
-    clearAllTimers();
-
-    const allMessages = [
-      ...SHIFTS.map((shift) => ({ ...shift, isOffer: true, delay: shift.delay })),
-      ...NOISE.map((message) => ({ ...message, isOffer: false })),
-    ].sort((a, b) => a.delay - b.delay);
-
-    allMessages.forEach((message) => {
-      const typingTimer = setTimeout(() => {
-        setTyping(message.group);
-        setTimeout(() => setTyping(null), 900);
-      }, Math.max(0, message.delay - 1000));
-      timers.current.push(typingTimer);
-
-      const feedTimer = setTimeout(() => {
-        setFeed((previous) => [
-          ...previous,
-          {
-            ...message,
-            ts: nowT(),
-            state: message.isOffer ? "scanning" : "done",
-          },
-        ]);
-
-        if (!message.isOffer) {
-          return;
-        }
-
-        const scoreTimer = setTimeout(() => {
-          try {
-            const result = calcScore(message, prefs);
-            const score = result.s;
-            const ok = score >= 60;
-
-            setFeed((previous) =>
-              previous.map((item) =>
-                item.id === message.id
-                  ? {
-                      ...item,
-                      state: "done",
-                      sc: score,
-                      ok,
-                    }
-                  : item,
-              ),
-            );
-
-            if (prefs.auto) {
-              if (ok) {
-                setCaptured((previous) => [
-                  ...previous,
-                  {
-                    ...message,
-                    sc: score,
-                    capturedAt: nowT(),
-                  },
-                ]);
-                setMonthly((previous) => previous.map((entry) => (entry.m === "Mar" ? { ...entry, v: entry.v + message.val } : entry)));
-                toast("Plantao garantido", `${message.hospital} - R$ ${fmt(message.val)}`, "success", "bot");
-                addNotif(
-                  "Plantao capturado",
-                  `${message.hospital} - ${message.date} - R$ ${fmt(message.val)}`,
-                  "success",
-                  "bot",
-                );
-                if (message.val >= 3000) {
-                  setConfetti(true);
-                  setTimeout(() => setConfetti(false), 2500);
-                }
-              } else {
-                setRejected((previous) => [...previous, { ...message, sc: score }]);
-                addNotif("Vaga descartada", `${message.hospital} - score ${score}%`, "info", "bot");
-              }
-            } else if (ok) {
-              setPending((previous) => [...previous, { ...message, sc: score }]);
-            } else {
-              setRejected((previous) => [...previous, { ...message, sc: score }]);
-            }
-          } catch {
-            setFeedError("Falha ao processar feed em tempo real.");
-            toast("Erro no monitoramento", "Nao foi possivel processar o feed. Tente reiniciar o bot.", "error", "system");
-          }
-        }, 1700);
-
-        timers.current.push(scoreTimer);
-      }, message.delay);
-
-      timers.current.push(feedTimer);
-    });
-
-    timers.current.push(
-      setTimeout(() => {
-        setBotOn(false);
-      }, 30000),
-    );
-  }
-
-  function stopBot() {
-    setBotOn(false);
     setTyping(null);
-    clearAllTimers();
-  }
 
-  function acceptPending(shift) {
-    setPending((previous) => previous.filter((item) => item.id !== shift.id));
-    setCaptured((previous) => [...previous, { ...shift, capturedAt: nowT() }]);
-    setMonthly((previous) => previous.map((item) => (item.m === "Mar" ? { ...item, v: item.v + shift.val } : item)));
-    toast("Aceito", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "manual");
-    if (shift.val >= 3000) {
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 2500);
+    try {
+      const response = await startMonitoring({
+        groups,
+        prefs,
+        operatorName: name,
+      });
+
+      monitorSessionIdRef.current = response.sessionId;
+      setBotOn(true);
+      startPolling();
+      toast("Monitoramento iniciado", "Conexão ativa com o backend de ofertas.", "success", "system");
+    } catch (error) {
+      const message = error?.message || "Não foi possível iniciar o monitoramento real.";
+      setFeedError(message);
+      toast("Falha ao iniciar", message, "error", "system");
     }
   }
 
-  function rejectPending(shift) {
-    setPending((previous) => previous.filter((item) => item.id !== shift.id));
-    setRejected((previous) => [...previous, shift]);
+  async function stopBot() {
+    stopPolling();
+    setBotOn(false);
+    setTyping(null);
+
+    try {
+      await stopMonitoring(monitorSessionIdRef.current);
+      toast("Monitoramento pausado", "Conexão com backend encerrada.", "info", "system");
+    } catch (error) {
+      toast("Falha ao pausar", error?.message || "Não foi possível encerrar o monitoramento remotamente.", "warning", "system");
+    }
+  }
+
+  async function acceptPending(shift) {
+    try {
+      const persisted = await captureOffer(shift, {
+        sessionId: monitorSessionIdRef.current,
+        source: "manual",
+      });
+      registerCapture({ ...shift, ...persisted }, { fromAuto: false });
+    } catch (error) {
+      toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
+    }
+  }
+
+  async function rejectPending(shift) {
+    try {
+      const persisted = await rejectOffer(shift, {
+        sessionId: monitorSessionIdRef.current,
+        reason: "manual_reject",
+      });
+
+      const rejectedShift = persisted || shift;
+      setPending((previous) => previous.filter((item) => item.id !== shift.id));
+      setRejected((previous) => appendUniqueById(previous, rejectedShift));
+    } catch (error) {
+      toast("Falha ao rejeitar", error?.message || "Não foi possível rejeitar este plantão.", "error", "manual");
+    }
   }
 
   function exportCSV() {
@@ -272,25 +575,41 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function acceptFromModal(shift) {
+  async function acceptFromModal(shift) {
     if (captured.some((item) => item.id === shift.id)) {
       return;
     }
 
-    setCaptured((previous) => [...previous, { ...shift, capturedAt: nowT() }]);
-    setMonthly((previous) => previous.map((item) => (item.m === "Mar" ? { ...item, v: item.v + shift.val } : item)));
-    setPending((previous) => previous.filter((item) => item.id !== shift.id));
-
-    if (shift.val >= 3000) {
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 2500);
+    try {
+      const persisted = await captureOffer(shift, {
+        sessionId: monitorSessionIdRef.current,
+        source: "manual",
+      });
+      registerCapture({ ...shift, ...persisted }, { fromAuto: false });
+    } catch (error) {
+      toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
     }
-
-    toast("Plantao aceito", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "manual");
-    addNotif("Plantao capturado", `${shift.hospital} - ${shift.date} - R$ ${fmt(shift.val)}`, "success", "bot");
   }
 
-  const total = useMemo(() => captured.reduce((sum, shift) => sum + shift.val, 0), [captured]);
+  async function handleClearHistory() {
+    if (!window.confirm("Limpar todo o histórico de plantões capturados? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    try {
+      await clearHistory();
+      setCaptured([]);
+      setRejected([]);
+      setPending([]);
+      setFeed([]);
+      processedOffersRef.current = new Set();
+      toast("Histórico limpo", "Dados operacionais removidos com sucesso.", "info", "manual");
+    } catch (error) {
+      toast("Falha ao limpar", error?.message || "Não foi possível limpar o histórico no backend.", "error", "manual");
+    }
+  }
+
+  const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
   const actG = useMemo(() => groups.filter((group) => group.active), [groups]);
   const projM = useMemo(() => (prefs.minVal <= 2000 ? 18400 : prefs.minVal <= 3000 ? 14200 : 9800), [prefs.minVal]);
 
@@ -300,20 +619,8 @@ export default function App() {
 
   const tabs = useMemo(
     () => [
-      createNavItem({
-        key: "dashboard",
-        icon: "D",
-        label: "Dashboard",
-        badgeCount: 0,
-        route: "/dashboard",
-      }),
-      createNavItem({
-        key: "feed",
-        icon: "F",
-        label: "Feed",
-        badgeCount: feed.length,
-        route: "/feed",
-      }),
+      createNavItem({ key: "dashboard", icon: "D", label: "Dashboard", badgeCount: 0, route: "/dashboard" }),
+      createNavItem({ key: "feed", icon: "F", label: "Feed", badgeCount: feed.length, route: "/feed" }),
       createNavItem({
         key: prefs.auto ? "captured" : "swipe",
         icon: prefs.auto ? "C" : "S",
@@ -321,27 +628,9 @@ export default function App() {
         badgeCount: prefs.auto ? captured.length : pending.length,
         route: prefs.auto ? "/captured" : "/swipe",
       }),
-      createNavItem({
-        key: "insights",
-        icon: "I",
-        label: "Insights",
-        badgeCount: 0,
-        route: "/insights",
-      }),
-      createNavItem({
-        key: "ai",
-        icon: "AI",
-        label: "Assistente",
-        badgeCount: 0,
-        route: "/ai",
-      }),
-      createNavItem({
-        key: "settings",
-        icon: "CFG",
-        label: "Configuracoes",
-        badgeCount: 0,
-        route: "/settings",
-      }),
+      createNavItem({ key: "insights", icon: "I", label: "Insights", badgeCount: 0, route: "/insights" }),
+      createNavItem({ key: "ai", icon: "AI", label: "Assistente", badgeCount: 0, route: "/ai" }),
+      createNavItem({ key: "settings", icon: "CFG", label: "Configuracoes", badgeCount: 0, route: "/settings" }),
     ],
     [feed.length, prefs.auto, captured.length, pending.length],
   );
@@ -424,10 +713,7 @@ export default function App() {
         actG={actG}
         setScreen={setScreen}
         setObStep={setObStep}
-        setCaptured={setCaptured}
-        setMonthly={setMonthly}
-        setRejected={setRejected}
-        toast={toast}
+        onClearHistory={handleClearHistory}
       />
     ),
   };
@@ -463,7 +749,15 @@ export default function App() {
       <Confetti active={confetti} />
       {uiV2 ? <ToastViewport items={toasts} /> : <Toasts items={toasts} />}
       <NotifDrawer open={notifOpen} notifs={notifs} onClose={() => setNotifOpen(false)} />
-      {modal ? <ShiftModal shift={modal} prefs={prefs} captured={captured} onClose={() => setModal(null)} onAccept={acceptFromModal} /> : null}
+      {modal ? (
+        <ShiftModal
+          shift={modal}
+          prefs={prefs}
+          captured={captured}
+          onClose={() => setModal(null)}
+          onAccept={acceptFromModal}
+        />
+      ) : null}
 
       {uiV2 ? (
         <AppShell
@@ -482,7 +776,7 @@ export default function App() {
           <div className="pb-tab-panels" style={{ animation: "fadeUp .25s both" }}>
             <PageHeader
               title={tabs.find((item) => item.key === activeTab)?.label || "Dashboard"}
-              subtitle={botOn ? "Monitoramento em execucao" : "Monitoramento pausado"}
+              subtitle={botOn ? "Monitoramento em execução" : "Monitoramento pausado"}
               action={
                 <div style={{ display: "flex", gap: 8 }}>
                   <Badge tone={botOn ? "success" : "warning"}>{botOn ? "Ativo" : "Inativo"}</Badge>
@@ -527,10 +821,26 @@ export default function App() {
                   title="Erro de monitoramento"
                   description={feedError}
                   action={
-                    <Button type="button" onClick={() => { setFeedError(null); startBot(); }}>
-                      Reiniciar bot
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setFeedError(null);
+                        startBot();
+                      }}
+                    >
+                      Reiniciar
                     </Button>
                   }
+                />
+              </Card>
+            ) : null}
+
+            {apiLoading ? (
+              <Card>
+                <EmptyState
+                  icon="?"
+                  title="Sincronizando dados reais"
+                  description="Carregando estado atual do backend..."
                 />
               </Card>
             ) : null}
@@ -618,5 +928,7 @@ export default function App() {
     </>
   );
 }
+
+
 
 

@@ -1,5 +1,5 @@
 import { C } from "../../constants/colors.js";
-import { DAYS, SPECS, MONTHLY } from "../../data/mockData.js";
+import { DAYS, SPECS } from "../../data/mockData.js";
 import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, PageHeader, Toggle } from "../ui/index.jsx";
 import { S } from "../../styles/index.js";
@@ -14,14 +14,17 @@ export default function SettingsTab({
   actG,
   setScreen,
   setObStep,
-  setCaptured,
-  setMonthly,
-  setRejected,
-  toast,
+  onClearHistory,
 }) {
   return (
     <div style={{ animation: "fadeUp .25s both" }}>
-      {uiV2 ? <PageHeader title="Configuracoes" subtitle="Preferencias operacionais, filtros e perfil" action={<Badge tone="info">{actG.length} grupos ativos</Badge>} /> : null}
+      {uiV2 ? (
+        <PageHeader
+          title="Configurações"
+          subtitle="Preferências operacionais, filtros e perfil"
+          action={<Badge tone="info">{actG.length} grupos ativos</Badge>}
+        />
+      ) : null}
 
       <Card style={{ marginBottom: 10 }}>
         <div style={{ marginBottom: 9, fontSize: 12, color: C.text2, fontWeight: 700 }}>Grupos monitorados</div>
@@ -46,7 +49,9 @@ export default function SettingsTab({
               </div>
               <Toggle
                 on={group.active}
-                onChange={() => setGroups((previous) => previous.map((item) => (item.id === group.id ? { ...item, active: !item.active } : item)))}
+                onChange={() =>
+                  setGroups((previous) => previous.map((item) => (item.id === group.id ? { ...item, active: !item.active } : item)))
+                }
                 label={`${group.active ? "Desativar" : "Ativar"} ${group.name}`}
               />
             </div>
@@ -60,7 +65,7 @@ export default function SettingsTab({
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
             <label htmlFor="sliderMinVal" style={S.lbl}>
-              Valor minimo
+              Valor mínimo
             </label>
             <span className="pb-mono" style={{ color: C.success, fontWeight: 700 }}>
               R$ {fmt(prefs.minVal)}
@@ -82,7 +87,7 @@ export default function SettingsTab({
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 7 }}>
             <label htmlFor="sliderMaxDist" style={S.lbl}>
-              Distancia maxima
+              Distância máxima
             </label>
             <span className="pb-mono" style={{ color: C.info, fontWeight: 700 }}>
               {prefs.maxDist} km
@@ -102,7 +107,7 @@ export default function SettingsTab({
         </div>
 
         <div style={{ marginBottom: 12 }}>
-          <div style={S.lbl}>Dias disponiveis</div>
+          <div style={S.lbl}>Dias disponíveis</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 7 }}>
             {DAYS.map((day) => {
               const enabled = prefs.days.includes(day);
@@ -146,9 +151,7 @@ export default function SettingsTab({
                   onClick={() =>
                     setPrefs((previous) => ({
                       ...previous,
-                      specs: enabled
-                        ? previous.specs.filter((item) => item !== specialty)
-                        : [...previous.specs, specialty],
+                      specs: enabled ? previous.specs.filter((item) => item !== specialty) : [...previous.specs, specialty],
                     }))
                   }
                   style={{
@@ -174,8 +177,8 @@ export default function SettingsTab({
         <div style={{ marginBottom: 9, fontSize: 12, color: C.text2, fontWeight: 700 }}>Modo de aceite</div>
         <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
           {[
-            { value: true, title: "Automatico", description: "Captura imediata sem confirmacao" },
-            { value: false, title: "Manual (swipe)", description: "Voce decide cada oportunidade" },
+            { value: true, title: "Automático", description: "Captura imediata sem confirmação" },
+            { value: false, title: "Manual (swipe)", description: "Você decide cada oportunidade" },
           ].map((option) => {
             const active = prefs.auto === option.value;
             return (
@@ -208,28 +211,20 @@ export default function SettingsTab({
             <div style={{ fontSize: 15, fontWeight: 700 }}>{name || "Dr(a). Medico"}</div>
             <div style={{ marginTop: 2, fontSize: 11, color: C.text2 }}>Plataforma ativa em {actG.length} grupos</div>
           </div>
-          <Button type="button" variant="secondary" onClick={() => { setScreen("onboard"); setObStep(0); }}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setScreen("onboard");
+              setObStep(0);
+            }}
+          >
             Editar
           </Button>
         </div>
 
-        <Button
-          type="button"
-          variant="danger"
-          onClick={() => {
-            if (
-              window.confirm(
-                "Limpar todo o historico de plantoes capturados? Esta acao nao pode ser desfeita.",
-              )
-            ) {
-              setCaptured([]);
-              setMonthly(MONTHLY);
-              setRejected([]);
-              toast("Historico limpo", "Plantoes capturados foram removidos.", "info", "manual");
-            }
-          }}
-        >
-          Limpar historico de plantoes
+        <Button type="button" variant="danger" onClick={onClearHistory}>
+          Limpar histórico de plantões
         </Button>
       </Card>
     </div>
