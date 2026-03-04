@@ -8,14 +8,39 @@ Demo de interface React para um assistente de captação de plantões médicos c
 - painel de configurações e notificações;
 - chat de IA contextual.
 
-## Estrutura do repositório
+## Estrutura do projeto
 
-- `src/main.jsx`: ponto de entrada da aplicação (renderiza `src/App.jsx`).
-- `src/App.jsx`: shell principal da UI.
-- `src/components/*`: componentes React em `PascalCase`.
-- `src/hooks/useLocalStorage.js`: hook customizado em `camelCase` com prefixo `use`.
+A aplicação está organizada em múltiplos módulos dentro de `src/`.
 
-## Como usar
+```text
+src/
+├── components/
+│   ├── AIChat.jsx
+│   ├── InsightsPanel.jsx
+│   ├── NotifDrawer.jsx
+│   ├── Onboarding.jsx
+│   ├── ShiftModal.jsx
+│   ├── SwipeCard.jsx
+│   ├── tabs/
+│   │   ├── CapturedTab.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── FeedTab.jsx
+│   │   ├── InsightsTab.jsx
+│   │   ├── SettingsTab.jsx
+│   │   └── SwipeTab.jsx
+│   └── ui/
+│       └── index.jsx
+├── constants/
+│   └── colors.js
+├── data/
+│   └── mockData.js
+├── hooks/
+│   └── useLocalStorage.js
+└── utils/
+    └── index.js
+```
+
+## Fluxo de execução
 
 1. Instale as dependências:
 
@@ -23,23 +48,45 @@ Demo de interface React para um assistente de captação de plantões médicos c
    npm install
    ```
 
-2. Inicie o projeto:
+2. Rode em desenvolvimento:
 
    ```bash
    npm run dev
    ```
 
-3. Para gerar build de produção:
+3. Gere build de produção:
 
    ```bash
    npm run build
    ```
+
+4. Faça preview local da build:
+
+   ```bash
+   npm run preview
+   ```
+
+## Convenções
+
+- **Nomenclatura de arquivos**:
+  - Componentes React em `PascalCase` (ex.: `SwipeCard.jsx`).
+  - Hooks em `camelCase` iniciando com `use` (ex.: `useLocalStorage.js`).
+  - Utilitários, constantes e dados em `camelCase`/nomes descritivos (ex.: `mockData.js`, `colors.js`).
+- **Idioma da UI**: priorizar textos em português (pt-BR), mantendo consistência de vocabulário para contexto médico.
+- **Estilo de componentes**: manter componentes funcionais, foco em responsabilidade única por arquivo e composição por pastas (`tabs`, `ui`) quando fizer sentido.
 
 ## Requisitos
 
 - Node.js 18+
 - npm 9+
 
-## Observações
+## Qualidade
 
-- Os dados de plantões, grupos e notificações são mockados para fins de demonstração.
+No estado atual, o projeto não possui comandos de lint/test configurados em `package.json`.
+
+Quando esses scripts forem introduzidos, esta seção deve ser atualizada com comandos como:
+
+```bash
+npm run lint
+npm test
+```
