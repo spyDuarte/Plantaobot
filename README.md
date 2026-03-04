@@ -8,13 +8,39 @@ Demo de interface React para um assistente de captação de plantões médicos c
 - painel de configurações e notificações;
 - chat de IA contextual.
 
-## Estrutura do repositório
+## Estrutura do projeto
 
 - `src/`: código-fonte principal da aplicação React.
 - `src/utils/index.js`: funções utilitárias puras (inclui cálculo de score).
 - `.github/workflows/ci.yml`: pipeline de qualidade executada em pull requests.
 
-## Como usar
+```text
+src/
+├── components/
+│   ├── AIChat.jsx
+│   ├── InsightsPanel.jsx
+│   ├── NotifDrawer.jsx
+│   ├── Onboarding.jsx
+│   ├── ShiftModal.jsx
+│   ├── SwipeCard.jsx
+│   ├── tabs/
+│   │   ├── CapturedTab.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── FeedTab.jsx
+│   │   ├── InsightsTab.jsx
+│   │   ├── SettingsTab.jsx
+│   │   └── SwipeTab.jsx
+│   └── ui/
+│       └── index.jsx
+├── constants/
+│   └── colors.js
+├── data/
+│   └── mockData.js
+├── hooks/
+│   └── useLocalStorage.js
+└── utils/
+    └── index.js
+```
 
 1. Instale as dependências:
 
