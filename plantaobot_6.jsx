@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar } from "recharts";
 
 /* ═══════════════════════════════════════════════════════
@@ -17,6 +17,7 @@ const C = {
 };
 
 const AVC = {P:"#00ff9d",C:"#22d4f5",A:"#f472b6",S:"#a78bfa",U:"#f5a623",H:"#34d399",V:"#60a5fa",M:"#fbbf24",F:"#e879f9",O:"#4ade80",K:"#f87171",N:"#38bdf8"};
+const reducedMotion = typeof window!=="undefined"&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const fmt = n => n.toLocaleString("pt-BR");
 const nowT = () => new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
 
@@ -63,7 +64,7 @@ function calcScore(shift, p) {
 ═══════════════════════════════════════════════════════ */
 function Av({l,sz=32}) {
   const col=AVC[l]||"#64748b";
-  return <div style={{width:sz,height:sz,borderRadius:"50%",background:"rgba(0,0,0,0.3)",border:"1.5px solid "+col+"55",display:"flex",alignItems:"center",justifyContent:"center",fontSize:sz*.36,fontWeight:800,color:col,flexShrink:0}}>{l}</div>;
+  return <div aria-hidden="true" style={{width:sz,height:sz,borderRadius:"50%",background:"rgba(0,0,0,0.3)",border:"1.5px solid "+col+"55",display:"flex",alignItems:"center",justifyContent:"center",fontSize:sz*.36,fontWeight:800,color:col,flexShrink:0}}>{l}</div>;
 }
 
 function Pill({sc}) {
@@ -84,9 +85,9 @@ function ScBar({sc,h=4}) {
   );
 }
 
-function Toggle({on,onChange}) {
-  return <button onClick={onChange} style={{width:42,height:23,borderRadius:12,background:on?"linear-gradient(135deg,"+C.em+","+C.cy+")":C.bd,border:"none",cursor:"pointer",position:"relative",transition:"all .3s",flexShrink:0,boxShadow:on?"0 0 14px "+C.emA:""}}>
-    <div style={{position:"absolute",top:2.5,left:on?20:2.5,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .3s cubic-bezier(.4,0,.2,1)",boxShadow:"0 1px 6px rgba(0,0,0,.5)"}}/>
+function Toggle({on,onChange,label}) {
+  return <button onClick={onChange} role="switch" aria-checked={on} aria-label={label} style={{width:42,height:23,borderRadius:12,background:on?"linear-gradient(135deg,"+C.em+","+C.cy+")":C.bd,border:"none",cursor:"pointer",position:"relative",transition:"all .3s",flexShrink:0,boxShadow:on?"0 0 14px "+C.emA:""}}>
+    <div style={{position:"absolute",top:2.5,left:on?20:2.5,width:18,height:18,borderRadius:"50%",background:"#fff",transition:reducedMotion?"none":"left .3s cubic-bezier(.4,0,.2,1)",boxShadow:"0 1px 6px rgba(0,0,0,.5)"}}/>
   </button>;
 }
 
@@ -147,9 +148,9 @@ function Toasts({items}) {
 
 /* Waveform animation for bot "listening" state */
 function Waveform({active}) {
-  return <div style={{display:"flex",alignItems:"center",gap:3,height:24}}>
+  return <div style={{display:"flex",alignItems:"center",gap:3,height:24}} aria-hidden="true">
     {[1,.6,.9,.5,.8,.4,.7,.5,.9,.6,1,.7].map((h,i)=>(
-      <div key={i} style={{width:3,height:active?(h*20)+"px":"3px",background:active?"linear-gradient(180deg,"+C.em+","+C.cy+")":C.bd,borderRadius:2,transition:"height .15s ease",animationDelay:i*.05+"s",animation:active?"wave .8s "+(i*.07)+"s ease-in-out infinite alternate":""}}/>
+      <div key={i} style={{width:3,height:active?(h*20)+"px":"3px",background:active?"linear-gradient(180deg,"+C.em+","+C.cy+")":C.bd,borderRadius:2,transition:reducedMotion?"none":"height .15s ease",animation:active&&!reducedMotion?"wave .8s "+(i*.07)+"s ease-in-out infinite alternate":""}}/>
     ))}
   </div>;
 }
@@ -178,19 +179,20 @@ function RivalRace({shift,won}) {
 }
 
 /* Shift modal */
-function ShiftModal({shift,prefs,onClose,onAccept}) {
+function ShiftModal({shift,prefs,onClose,onAccept,captured=[]}) {
   if(!shift) return null;
   const res=calcScore(shift,prefs); const sc=res.s; const r=res.r;
   const col=sc>=80?C.em:sc>=50?C.am:C.rd;
-  return <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(2,6,15,0.88)",backdropFilter:"blur(14px)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:14}} onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} style={{background:"rgba(7,14,29,0.99)",backdropFilter:"blur(24px)",border:"1px solid "+col+"44",borderRadius:22,width:"100%",maxWidth:420,padding:22,boxShadow:"0 0 80px "+col+"12,0 30px 80px rgba(0,0,0,.9)",animation:"modalUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",position:"relative"}}>
+  const alreadyCaptured=captured.some(c=>c.id===shift.id);
+  return <div role="presentation" style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(2,6,15,0.88)",backdropFilter:"blur(14px)",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:14}} onClick={onClose}>
+    <div role="dialog" aria-modal="true" aria-label={shift.hospital} onClick={e=>e.stopPropagation()} style={{background:"rgba(7,14,29,0.99)",backdropFilter:"blur(24px)",border:"1px solid "+col+"44",borderRadius:22,width:"100%",maxWidth:420,padding:22,boxShadow:"0 0 80px "+col+"12,0 30px 80px rgba(0,0,0,.9)",animation:reducedMotion?"none":"modalUp .3s cubic-bezier(.4,0,.2,1)",maxHeight:"90vh",overflowY:"auto",position:"relative"}}>
       <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,"+col+"88,transparent)",borderRadius:"22px 22px 0 0"}}/>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
         <div>
           <div style={{fontSize:17,fontWeight:800,color:C.tx0,letterSpacing:"-.4px"}}>{shift.hospital}</div>
           <div style={{fontSize:11,color:C.tx2,marginTop:2}}>{shift.group}</div>
         </div>
-        <button onClick={onClose} style={{background:C.bd,border:"1px solid "+C.bd,color:C.tx1,width:28,height:28,borderRadius:"50%",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
+        <button onClick={onClose} aria-label="Fechar" style={{background:C.bd,border:"1px solid "+C.bd,color:C.tx1,width:28,height:28,borderRadius:"50%",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:14}}>
         {[["💰","Valor","R$ "+fmt(shift.val)],["⏰","Duração",shift.hours],["📅","Data",shift.date],["📍","Distância",shift.dist+" km"],["🩺","Especialidade",shift.spec],["📌","Local",shift.loc]].map(([ic,lb,v])=>(
@@ -217,7 +219,10 @@ function ShiftModal({shift,prefs,onClose,onAccept}) {
       <div style={{background:"rgba(0,0,0,.5)",borderRadius:10,padding:"9px 11px",margin:"12px 0",fontFamily:"monospace",fontSize:10,color:C.tx2,whiteSpace:"pre-wrap",maxHeight:80,overflowY:"auto",lineHeight:1.7,borderLeft:"2px solid "+C.bd}}>{shift.rawMsg}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
         <button onClick={onClose} style={{padding:"11px",background:C.bd,border:"1px solid "+C.bd,borderRadius:12,color:C.tx1,fontWeight:700,cursor:"pointer",fontSize:13}}>Fechar</button>
-        <button onClick={()=>{onAccept&&onAccept(shift);onClose();}} style={{padding:"11px",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"none",borderRadius:12,color:"#021810",fontWeight:800,cursor:"pointer",fontSize:13,boxShadow:"0 4px 20px "+C.emA}}>✓ Aceitar</button>
+        {alreadyCaptured
+          ?<button disabled style={{padding:"11px",background:C.emB,border:"1px solid "+C.em+"44",borderRadius:12,color:C.em,fontWeight:800,fontSize:13,cursor:"default"}}>✓ Já Capturado</button>
+          :<button onClick={()=>{onAccept&&onAccept(shift);onClose();}} style={{padding:"11px",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"none",borderRadius:12,color:"#021810",fontWeight:800,cursor:"pointer",fontSize:13,boxShadow:"0 4px 20px "+C.emA}}>✓ Aceitar</button>
+        }
       </div>
     </div>
   </div>;
@@ -230,7 +235,7 @@ function NotifDrawer({open,notifs,onClose}) {
     <div style={{position:"fixed",top:0,right:0,height:"100vh",width:300,background:"rgba(7,14,29,0.98)",backdropFilter:"blur(24px)",borderLeft:"1px solid "+C.bd,zIndex:8000,transform:open?"translateX(0)":"translateX(100%)",transition:"transform .35s cubic-bezier(.4,0,.2,1)",display:"flex",flexDirection:"column",boxShadow:"-12px 0 50px rgba(0,0,0,.8)"}}>
       <div style={{padding:"20px 16px 12px",borderBottom:"1px solid "+C.bd,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:14,fontWeight:800,color:C.tx0}}>Notificações</div>
-        <button onClick={onClose} style={{background:C.bd,border:"1px solid "+C.bd,color:C.tx1,width:26,height:26,borderRadius:"50%",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        <button onClick={onClose} aria-label="Fechar notificações" style={{background:C.bd,border:"1px solid "+C.bd,color:C.tx1,width:26,height:26,borderRadius:"50%",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"10px 12px"}}>
         {notifs.length===0?<div style={{textAlign:"center",padding:40,color:C.tx2}}><div style={{fontSize:28,marginBottom:8}}>🔔</div><div style={{fontSize:12}}>Nenhuma notificação</div></div>
@@ -444,10 +449,10 @@ function InsightsPanel({captured,rejected,prefs}) {
 
 /* Background orbs */
 function BgOrbs() {
-  return <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:0,pointerEvents:"none",overflow:"hidden"}}>
-    <div style={{position:"absolute",top:"-20%",left:"-10%",width:"60%",height:"60%",background:"radial-gradient(circle,rgba(0,255,157,0.055) 0%,transparent 70%)",animation:"orb1 22s ease-in-out infinite"}}/>
-    <div style={{position:"absolute",bottom:"5%",right:"-15%",width:"55%",height:"55%",background:"radial-gradient(circle,rgba(34,212,245,0.045) 0%,transparent 70%)",animation:"orb2 28s ease-in-out infinite"}}/>
-    <div style={{position:"absolute",top:"35%",left:"25%",width:"45%",height:"45%",background:"radial-gradient(circle,rgba(167,139,250,0.035) 0%,transparent 70%)",animation:"orb3 35s ease-in-out infinite"}}/>
+  return <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:0,pointerEvents:"none",overflow:"hidden"}} aria-hidden="true">
+    <div style={{position:"absolute",top:"-20%",left:"-10%",width:"60%",height:"60%",background:"radial-gradient(circle,rgba(0,255,157,0.055) 0%,transparent 70%)",animation:reducedMotion?"none":"orb1 22s ease-in-out infinite"}}/>
+    <div style={{position:"absolute",bottom:"5%",right:"-15%",width:"55%",height:"55%",background:"radial-gradient(circle,rgba(34,212,245,0.045) 0%,transparent 70%)",animation:reducedMotion?"none":"orb2 28s ease-in-out infinite"}}/>
+    <div style={{position:"absolute",top:"35%",left:"25%",width:"45%",height:"45%",background:"radial-gradient(circle,rgba(167,139,250,0.035) 0%,transparent 70%)",animation:reducedMotion?"none":"orb3 35s ease-in-out infinite"}}/>
     <div style={{position:"absolute",top:0,left:0,right:0,bottom:0,backgroundImage:"linear-gradient("+C.bd+" 1px,transparent 1px),linear-gradient(90deg,"+C.bd+" 1px,transparent 1px)",backgroundSize:"44px 44px",maskImage:"radial-gradient(ellipse 80% 80% at 50% 40%,black 30%,transparent 100%)"}}/>
   </div>;
 }
@@ -557,6 +562,15 @@ export default function App() {
     setPending(p=>p.filter(x=>x.id!==shift.id));
     setRejected(p=>[...p,shift]);
   }
+  function exportCSV(){
+    const header=["Hospital","Grupo","Especialidade","Valor (R$)","Data","Duração","Distância (km)","Score (%)","Capturado às"];
+    const rows=captured.map(s=>[s.hospital,s.group,s.spec,s.val,s.date,s.hours,s.dist,s.sc||"",s.capturedAt||""]);
+    const csv=[header,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+    const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="plantoes_capturados.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
   function acceptFromModal(shift){
     if(captured.some(c=>c.id===shift.id)) return;
     setCaptured(p=>[...p,{...shift,capturedAt:nowT()}]);
@@ -567,9 +581,9 @@ export default function App() {
     addNotif("✅ Plantão capturado!",shift.hospital+" · "+shift.date+" · R$ "+fmt(shift.val),"win");
   }
 
-  const total=captured.reduce((a,s)=>a+s.val,0);
-  const actG=groups.filter(g=>g.active);
-  const projM=prefs.minVal<=2000?18400:prefs.minVal<=3000?14200:9800;
+  const total=useMemo(()=>captured.reduce((a,s)=>a+s.val,0),[captured]);
+  const actG=useMemo(()=>groups.filter(g=>g.active),[groups]);
+  const projM=useMemo(()=>prefs.minVal<=2000?18400:prefs.minVal<=3000?14200:9800,[prefs.minVal]);
 
   /* ONBOARDING */
   const ob=[
@@ -689,7 +703,7 @@ export default function App() {
       <Confetti active={confetti}/>
       <Toasts items={toasts}/>
       <NotifDrawer open={notifOpen} notifs={notifs} onClose={()=>setNotifOpen(false)}/>
-      {modal&&<ShiftModal shift={modal} prefs={prefs} onClose={()=>setModal(null)} onAccept={acceptFromModal}/>}
+      {modal&&<ShiftModal shift={modal} prefs={prefs} captured={captured} onClose={()=>setModal(null)} onAccept={acceptFromModal}/>}
 
       {/* HEADER */}
       <header style={{position:"sticky",top:0,zIndex:400,background:"rgba(2,6,15,0.85)",backdropFilter:"blur(24px)",borderBottom:"1px solid "+C.bd,padding:"0 16px",display:"flex",alignItems:"center",height:56,gap:12}}>
@@ -705,9 +719,9 @@ export default function App() {
             <Waveform active={true}/>
             <span style={{fontSize:9,fontWeight:800,color:C.em,letterSpacing:.8}}>ATIVO</span>
           </div>}
-          <button onClick={()=>setNotifOpen(true)} style={{background:"rgba(255,255,255,0.06)",border:"1px solid "+C.bd,borderRadius:9,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,position:"relative"}}>
-            🔔
-            {notifs.length>0&&<div style={{position:"absolute",top:-2,right:-2,width:15,height:15,borderRadius:"50%",background:C.rd,fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 8px "+C.rd}}>{notifs.length>9?"9+":notifs.length}</div>}
+          <button onClick={()=>setNotifOpen(true)} aria-label={"Notificações"+(notifs.length>0?" ("+notifs.length+")":"")} style={{background:"rgba(255,255,255,0.06)",border:"1px solid "+C.bd,borderRadius:9,width:34,height:34,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,position:"relative"}}>
+            <span aria-hidden="true">🔔</span>
+            {notifs.length>0&&<div aria-hidden="true" style={{position:"absolute",top:-2,right:-2,width:15,height:15,borderRadius:"50%",background:C.rd,fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 0 8px "+C.rd}}>{notifs.length>9?"9+":notifs.length}</div>}
           </button>
           <button onClick={botOn?stopBot:startBot}
             style={{padding:"7px 14px",background:botOn?C.rdA:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"1px solid "+(botOn?C.rd+"44":"transparent"),borderRadius:10,color:botOn?C.rd:"#021810",fontSize:11,fontWeight:800,cursor:"pointer",letterSpacing:.2,boxShadow:botOn?"":("0 4px 20px "+C.emA),whiteSpace:"nowrap"}}>
@@ -863,7 +877,10 @@ export default function App() {
 
         {/* CAPTURED */}
         {tab==="captured"&&<div style={{animation:"fadeUp .35s both"}}>
-          <div style={{fontSize:20,fontWeight:800,color:C.tx0,letterSpacing:"-.5px",marginBottom:14}}>Plantões Capturados</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{fontSize:20,fontWeight:800,color:C.tx0,letterSpacing:"-.5px"}}>Plantões Capturados</div>
+            {captured.length>0&&<button onClick={exportCSV} aria-label="Exportar plantões como CSV" style={{fontSize:11,color:C.cy,background:C.cyB,border:"1px solid "+C.cy+"33",borderRadius:9,padding:"6px 12px",cursor:"pointer",fontWeight:700}}>⬇ CSV</button>}
+          </div>
           {captured.length===0
             ?<GlassCard style={{textAlign:"center",padding:"50px 20px"}}><div style={{fontSize:36,marginBottom:10}}>🎯</div><div style={{fontSize:13,fontWeight:700,color:C.tx1}}>Nenhum plantão ainda</div><div style={{fontSize:11,color:C.tx2,marginTop:3}}>Inicie o bot no Dashboard</div></GlassCard>
             :<>
@@ -950,7 +967,7 @@ export default function App() {
               <div key={g.id} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.03)",border:"1px solid "+C.bd,borderRadius:11,padding:"10px 13px",marginBottom:7}}>
                 <span style={{fontSize:18}}>{g.emoji}</span>
                 <div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,color:C.tx0}}>{g.name}</div><div style={{fontSize:10,color:C.tx2,marginTop:1}}>{g.members} membros</div></div>
-                <Toggle on={g.active} onChange={()=>setGroups(p=>p.map(x=>x.id===g.id?{...x,active:!x.active}:x))}/>
+                <Toggle on={g.active} onChange={()=>setGroups(p=>p.map(x=>x.id===g.id?{...x,active:!x.active}:x))} label={(g.active?"Desativar":"Ativar")+" "+g.name}/>
               </div>
             ))}
           </GlassCard>
