@@ -28,6 +28,45 @@ Demo de interface React para um assistente de captação de plantões médicos c
    npm run dev
    ```
 
+## Configuração de `VITE_BASE_PATH`
+
+O projeto lê a base de publicação via variável de ambiente `VITE_BASE_PATH` no `vite.config.js`.
+
+- **Fallback padrão:** quando `VITE_BASE_PATH` não é definida (ou está vazia), a base usada é `'/'`, ideal para desenvolvimento local.
+- A base é normalizada automaticamente para começar e terminar com `/`.
+
+### Exemplos
+
+**Desenvolvimento local (root):**
+
+```bash
+npm run dev
+```
+
+ou explicitamente:
+
+```bash
+VITE_BASE_PATH=/ npm run dev
+```
+
+**Build para GitHub Pages (`/Plantaobot/`):**
+
+```bash
+VITE_BASE_PATH=/Plantaobot/ npm run build
+```
+
+**Build para subpath em servidor (`/apps/plantaobot/`):**
+
+```bash
+VITE_BASE_PATH=/apps/plantaobot/ npm run build
+```
+
+> Dica: também é possível definir em arquivo `.env.production`:
+>
+> ```env
+> VITE_BASE_PATH=/Plantaobot/
+> ```
+
 ## Requisitos
 
 - Node.js 18+
