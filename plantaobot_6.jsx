@@ -472,6 +472,11 @@ export default function App() {
   const timers=useRef([]); const feedRef=useRef(null);
   const tid=useRef(0); const nid=useRef(0);
 
+  const clearAllTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  }, []);
+
   const toast=useCallback((title,body,type="win")=>{
     const id=++tid.current; setToasts(p=>[...p,{id,title,body,type}]);
     setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),4500);
@@ -481,10 +486,11 @@ export default function App() {
   },[]);
 
   useEffect(()=>{if(feedRef.current) feedRef.current.scrollTop=99999;},[feed]);
+  useEffect(() => () => clearAllTimers(), [clearAllTimers]);
 
   function startBot() {
     setBotOn(true); setFeed([]); setCaptured([]); setRejected([]); setPending([]);
-    setMonthly(MONTHLY); timers.current.forEach(clearTimeout); timers.current=[];
+    setMonthly(MONTHLY); clearAllTimers();
     const all=[...SHIFTS.map(s=>({...s,isOffer:true,delay:s.delay})),...NOISE.map(n=>({...n,isOffer:false}))].sort((a,b)=>a.delay-b.delay);
     all.forEach(msg=>{
       const tT=setTimeout(()=>{setTyping(msg.group);setTimeout(()=>setTyping(null),900);},Math.max(0,msg.delay-1000));
@@ -515,7 +521,7 @@ export default function App() {
     });
     timers.current.push(setTimeout(()=>setBotOn(false),30000));
   }
-  function stopBot(){setBotOn(false);setTyping(null);timers.current.forEach(clearTimeout);}
+  function stopBot(){setBotOn(false);setTyping(null);clearAllTimers();}
 
   function acceptPending(shift){
     setPending(p=>p.filter(x=>x.id!==shift.id));
