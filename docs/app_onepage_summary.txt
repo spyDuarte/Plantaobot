@@ -1,0 +1,31 @@
+Plantaobot - One-Page App Summary
+
+What it is
+- Plantaobot is a React + Vite demo interface for an AI-assisted medical shift capture workflow.
+- It simulates triage of shift offers, manual swipe decisions, and performance tracking in a single UI.
+
+Who it is for
+- Primary persona: physicians in Brazil who monitor medical shift groups and want faster, criteria-based shift selection.
+
+What it does
+- Onboards the user and stores profile/preferences locally.
+- Simulates incoming group feed messages with offers and non-offer noise.
+- Scores shift offers by value, distance, day, and specialty preferences.
+- Auto-captures qualified offers (or routes them to manual swipe review).
+- Tracks captured/rejected/pending offers with dashboard and insights views.
+- Exports captured shifts to CSV.
+- Provides notifications, onboarding/settings controls, and a contextual AI chat panel.
+
+How it works (repo-evidenced architecture)
+- Frontend: Single-page React app bootstrapped by Vite; App.jsx orchestrates tabs/state.
+- Data layer: Static mock datasets (SHIFTS/NOISE/MONTHLY/GROUPS) drive simulation.
+- Decision engine: calcScore() in utils computes a 0-100 score from user preferences.
+- Persistence: useLocalStorage hook stores name, screen, captured shifts, groups, and prefs in browser localStorage.
+- UI modules: tab components (Dashboard/Feed/Swipe/Captured/Insights/Settings) plus AIChat, modals, notifications, and shared UI widgets.
+- Data flow: startBot() schedules timed feed events -> scoring -> captured/rejected/pending arrays -> dashboard/insights totals and CSV export.
+- Backend/API: Not found in repo.
+
+How to run (minimal)
+- Requirements: Node.js 18+ and npm 9+.
+- Install: npm install
+- Start dev server: npm run dev
