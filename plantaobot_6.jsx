@@ -624,7 +624,7 @@ export default function App() {
          <label style={S.lbl}>Dias disponíveis</label>
          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginTop:8}}>
            {DAYS.map(d=>{const on=prefs.days.includes(d);return(
-             <button key={d} onClick={()=>setPrefs(p=>({...p,days:on?p.days.filter(x=>x!==d):[...p.days,d]}))}
+             <button type="button" key={d} onClick={()=>setPrefs(p=>({...p,days:on?p.days.filter(x=>x!==d):[...p.days,d]}))}
                style={{padding:"10px 0",borderRadius:10,border:"1px solid "+(on?C.em+"55":C.bd),background:on?C.emA:"rgba(255,255,255,0.03)",color:on?C.em:C.tx2,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .15s",boxShadow:on?"0 0 12px "+C.emA:""}}>
                {d}
              </button>
@@ -635,7 +635,7 @@ export default function App() {
          <label style={S.lbl}>Especialidades</label>
          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
            {SPECS.map(s=>{const on=prefs.specs.includes(s);return(
-             <button key={s} onClick={()=>setPrefs(p=>({...p,specs:on?p.specs.filter(x=>x!==s):[...p.specs,s]}))}
+             <button type="button" key={s} onClick={()=>setPrefs(p=>({...p,specs:on?p.specs.filter(x=>x!==s):[...p.specs,s]}))}
                style={{padding:"6px 13px",borderRadius:20,border:"1px solid "+(on?C.cy+"55":C.bd),background:on?C.cyA:"rgba(255,255,255,0.03)",color:on?C.cy:C.tx2,fontSize:11,fontWeight:600,cursor:"pointer",transition:"all .15s"}}>
                {s}
              </button>
@@ -647,7 +647,7 @@ export default function App() {
     {icon:"⚡",title:"Modo de operação",sub:"Velocidade total vs. controle manual",
      body:<div style={{display:"flex",flexDirection:"column",gap:10}}>
        {[{v:true,i:"⚡",t:"Aceite automático",d:"Bot responde em 0.8s sem precisar de você. Máxima vantagem.",c:C.em},{v:false,i:"🃏",t:"Modo swipe",d:"Bot avisa e você decide deslizando os cards. Mais controle.",c:C.cy}].map(o=>(
-         <button key={o.t} onClick={()=>setPrefs(p=>({...p,auto:o.v}))}
+         <button type="button" key={o.t} onClick={()=>setPrefs(p=>({...p,auto:o.v}))}
            style={{background:prefs.auto===o.v?o.c+"08":"rgba(255,255,255,0.02)",border:"2px solid "+(prefs.auto===o.v?o.c+"44":C.bd),borderRadius:16,padding:"16px 18px",cursor:"pointer",textAlign:"left",transition:"all .2s"}}>
            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:5}}>
              <span style={{fontSize:22}}>{o.i}</span>
@@ -668,20 +668,20 @@ export default function App() {
         <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:30}}>
           {ob.map((_,i)=><div key={i} style={{width:i===obStep?24:8,height:8,borderRadius:4,background:i<=obStep?C.em:C.bd,transition:"all .3s cubic-bezier(.4,0,.2,1)",boxShadow:i===obStep?"0 0 12px "+C.emG:""}}/>)}
         </div>
-        <div style={{background:"rgba(7,14,29,0.88)",backdropFilter:"blur(28px)",border:"1px solid "+C.bd,borderRadius:24,padding:28,boxShadow:"0 30px 80px rgba(0,0,0,.8)",position:"relative",overflow:"hidden"}}>
+        <form onSubmit={e=>{e.preventDefault();obStep<ob.length-1?setObStep(p=>p+1):setScreen("app");}} style={{background:"rgba(7,14,29,0.88)",backdropFilter:"blur(28px)",border:"1px solid "+C.bd,borderRadius:24,padding:28,boxShadow:"0 30px 80px rgba(0,0,0,.8)",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,"+C.em+"66,transparent)"}}/>
-          <div style={{fontSize:42,marginBottom:12,lineHeight:1}}>{ob[obStep].icon}</div>
+          <div style={{fontSize:42,marginBottom:12,lineHeight:1}} aria-hidden="true">{ob[obStep].icon}</div>
           <div style={{fontSize:23,fontWeight:800,color:C.tx0,letterSpacing:"-.6px",marginBottom:5}}>{ob[obStep].title}</div>
           <div style={{fontSize:13,color:C.tx2,marginBottom:24,lineHeight:1.5}}>{ob[obStep].sub}</div>
-          <div key={obStep} style={{animation:"fadeUp .3s cubic-bezier(.4,0,.2,1)"}}>{ob[obStep].body}</div>
+          <div key={obStep} style={{animation:reducedMotion?"none":"fadeUp .3s cubic-bezier(.4,0,.2,1)"}}>{ob[obStep].body}</div>
           <div style={{display:"flex",gap:10,marginTop:26}}>
-            {obStep>0&&<button onClick={()=>setObStep(p=>p-1)} style={{flex:1,padding:"12px",background:C.bd,border:"1px solid "+C.bd,borderRadius:13,color:C.tx1,fontWeight:700,cursor:"pointer",fontSize:14}}>← Voltar</button>}
-            <button onClick={()=>obStep<ob.length-1?setObStep(p=>p+1):setScreen("app")}
+            {obStep>0&&<button type="button" onClick={()=>setObStep(p=>p-1)} style={{flex:1,padding:"12px",background:C.bd,border:"1px solid "+C.bd,borderRadius:13,color:C.tx1,fontWeight:700,cursor:"pointer",fontSize:14}}>← Voltar</button>}
+            <button type="submit"
               style={{flex:2,padding:"13px",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"none",borderRadius:13,color:"#021810",fontWeight:800,cursor:"pointer",fontSize:14,boxShadow:"0 4px 24px "+C.emA}}>
               {obStep<ob.length-1?"Continuar →":"🚀 Começar"}
             </button>
           </div>
-        </div>
+        </form>
         <div style={{textAlign:"center",marginTop:12,fontSize:11,color:C.tx2}}>{obStep+1} de {ob.length}</div>
       </div>
     </div>
@@ -974,12 +974,12 @@ export default function App() {
           <GlassCard style={{marginBottom:11}}>
             <div style={{fontSize:10,color:C.tx2,fontWeight:700,letterSpacing:1.2,marginBottom:14}}>FILTROS</div>
             <div style={{marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><label style={S.lbl}>Valor mínimo</label><span style={{fontWeight:800,color:C.em,fontSize:14,fontFamily:"monospace"}}>R$ {fmt(prefs.minVal)}</span></div>
-              <input type="range" min={500} max={5000} step={100} value={prefs.minVal} style={S.range} onChange={e=>setPrefs(p=>({...p,minVal:+e.target.value}))}/>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><label htmlFor="sliderMinVal" style={S.lbl}>Valor mínimo</label><span style={{fontWeight:800,color:C.em,fontSize:14,fontFamily:"monospace"}}>R$ {fmt(prefs.minVal)}</span></div>
+              <input id="sliderMinVal" type="range" min={500} max={5000} step={100} value={prefs.minVal} style={S.range} onChange={e=>setPrefs(p=>({...p,minVal:+e.target.value}))} aria-valuetext={"R$ "+fmt(prefs.minVal)}/>
             </div>
             <div style={{marginBottom:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><label style={S.lbl}>Distância máxima</label><span style={{fontWeight:800,color:C.cy,fontSize:14,fontFamily:"monospace"}}>{prefs.maxDist} km</span></div>
-              <input type="range" min={1} max={100} step={1} value={prefs.maxDist} style={S.range} onChange={e=>setPrefs(p=>({...p,maxDist:+e.target.value}))}/>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><label htmlFor="sliderMaxDist" style={S.lbl}>Distância máxima</label><span style={{fontWeight:800,color:C.cy,fontSize:14,fontFamily:"monospace"}}>{prefs.maxDist} km</span></div>
+              <input id="sliderMaxDist" type="range" min={1} max={100} step={1} value={prefs.maxDist} style={S.range} onChange={e=>setPrefs(p=>({...p,maxDist:+e.target.value}))} aria-valuetext={prefs.maxDist+" km"}/>
             </div>
             <div style={{marginBottom:14}}>
               <div style={S.lbl}>Dias disponíveis</div>
@@ -1016,24 +1016,25 @@ export default function App() {
           </GlassCard>
           <GlassCard>
             <div style={{fontSize:10,color:C.tx2,fontWeight:700,letterSpacing:1.2,marginBottom:10}}>PERFIL</div>
-            <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,0.03)",border:"1px solid "+C.bd,borderRadius:11,padding:"13px 15px"}}>
-              <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:800,color:"#021810",boxShadow:"0 4px 16px "+C.emA}}>{(name||"D")[0].toUpperCase()}</div>
+            <div style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,0.03)",border:"1px solid "+C.bd,borderRadius:11,padding:"13px 15px",marginBottom:10}}>
+              <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:800,color:"#021810",boxShadow:"0 4px 16px "+C.emA}} aria-hidden="true">{(name||"D")[0].toUpperCase()}</div>
               <div style={{flex:1}}><div style={{fontSize:14,fontWeight:700,color:C.tx0}}>{name||"Dr(a). Médico"}</div><div style={{fontSize:11,color:C.tx2,marginTop:1}}>PlantãoBot Pro · {actG.length} grupos</div></div>
               <button onClick={()=>{setScreen("onboard");setObStep(0);}} style={{fontSize:11,color:C.tx2,background:"rgba(255,255,255,0.06)",border:"1px solid "+C.bd,borderRadius:8,padding:"5px 12px",cursor:"pointer",fontWeight:600}}>Editar</button>
             </div>
+            <button onClick={()=>{if(window.confirm("Limpar todo o histórico de plantões capturados? Esta ação não pode ser desfeita.")){setCaptured([]);setMonthly(MONTHLY);setRejected([]);toast("🗑 Histórico limpo","Plantões capturados foram removidos.","info");}}} style={{width:"100%",padding:"10px",background:C.rdA,border:"1px solid "+C.rd+"33",borderRadius:10,color:C.rd,fontSize:12,fontWeight:700,cursor:"pointer"}}>🗑 Limpar histórico de plantões</button>
           </GlassCard>
         </div>}
 
       </main>
 
       {/* BOTTOM NAV */}
-      <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:400,background:"rgba(2,6,15,0.94)",backdropFilter:"blur(28px)",borderTop:"1px solid "+C.bd,display:"flex",justifyContent:"space-around",padding:"8px 4px 12px"}}>
+      <nav role="navigation" aria-label="Navegação principal" style={{position:"fixed",bottom:0,left:0,right:0,zIndex:400,background:"rgba(2,6,15,0.94)",backdropFilter:"blur(28px)",borderTop:"1px solid "+C.bd,display:"flex",justifyContent:"space-around",padding:"8px 4px 12px"}}>
         {TABS.map(t=>{
           const active=tab===t.k;
-          return <button key={t.k} onClick={()=>setTab(t.k)}
+          return <button key={t.k} onClick={()=>setTab(t.k)} aria-label={t.lbl} aria-current={active?"page":undefined}
             style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"5px 12px",borderRadius:12,transition:"all .2s",background:active?C.emA:"transparent",flex:1,minWidth:0}}>
-            <span style={{fontSize:18,lineHeight:1}}>{t.ico}</span>
-            <span style={{fontSize:9,fontWeight:700,color:active?C.em:C.tx2,letterSpacing:.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:64}}>{t.lbl}</span>
+            <span style={{fontSize:18,lineHeight:1}} aria-hidden="true">{t.ico}</span>
+            <span style={{fontSize:9,fontWeight:700,color:active?C.em:C.tx2,letterSpacing:.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:64}} aria-hidden="true">{t.lbl}</span>
           </button>;
         })}
       </nav>
