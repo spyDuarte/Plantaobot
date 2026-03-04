@@ -178,7 +178,7 @@ function RivalRace({shift,won}) {
 }
 
 /* Shift modal */
-function ShiftModal({shift,prefs,onClose}) {
+function ShiftModal({shift,prefs,onClose,onAccept}) {
   if(!shift) return null;
   const res=calcScore(shift,prefs); const sc=res.s; const r=res.r;
   const col=sc>=80?C.em:sc>=50?C.am:C.rd;
@@ -217,7 +217,7 @@ function ShiftModal({shift,prefs,onClose}) {
       <div style={{background:"rgba(0,0,0,.5)",borderRadius:10,padding:"9px 11px",margin:"12px 0",fontFamily:"monospace",fontSize:10,color:C.tx2,whiteSpace:"pre-wrap",maxHeight:80,overflowY:"auto",lineHeight:1.7,borderLeft:"2px solid "+C.bd}}>{shift.rawMsg}</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
         <button onClick={onClose} style={{padding:"11px",background:C.bd,border:"1px solid "+C.bd,borderRadius:12,color:C.tx1,fontWeight:700,cursor:"pointer",fontSize:13}}>Fechar</button>
-        <button onClick={onClose} style={{padding:"11px",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"none",borderRadius:12,color:"#021810",fontWeight:800,cursor:"pointer",fontSize:13,boxShadow:"0 4px 20px "+C.emA}}>✓ Aceitar</button>
+        <button onClick={()=>{onAccept&&onAccept(shift);onClose();}} style={{padding:"11px",background:"linear-gradient(135deg,"+C.em+","+C.cy+")",border:"none",borderRadius:12,color:"#021810",fontWeight:800,cursor:"pointer",fontSize:13,boxShadow:"0 4px 20px "+C.emA}}>✓ Aceitar</button>
       </div>
     </div>
   </div>;
@@ -317,7 +317,7 @@ function AIChat({prefs,name,captured,rejected}) {
   ];
 
   async function send(text) {
-    const q=text||input.trim(); if(!q||loading) return;
+    const q=(text||input).trim().slice(0,500); if(!q||loading) return;
     setInput(""); setLoading(true);
     const history=[...msgs,{role:"user",content:q}];
     setMsgs(history);
@@ -326,10 +326,15 @@ function AIChat({prefs,name,captured,rejected}) {
       "Plantões capturados nesta sessão: "+captured.length+" (total R$"+fmt(captured.reduce((a,s)=>a+s.val,0))+"). "+
       "Plantões recusados: "+rejected.length+". "+
       "Seja direto, use emojis médicos ocasionalmente, dê conselhos práticos e financeiros. Responda em português do Brasil. Seja conciso (máx 3 parágrafos).";
+    const apiKey=import.meta.env.VITE_ANTHROPIC_API_KEY;
+    if(!apiKey){
+      setMsgs(p=>[...p,{role:"assistant",content:"⚠️ Chave de API não configurada. Crie um arquivo .env com VITE_ANTHROPIC_API_KEY=sua-chave e reinicie o servidor."}]);
+      setLoading(false); return;
+    }
     try {
       const res=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,system:context,messages:history.map(m=>({role:m.role,content:m.content}))})
       });
       const data=await res.json();
@@ -377,7 +382,7 @@ function AIChat({prefs,name,captured,rejected}) {
       </div>
       {/* Input */}
       <div style={{display:"flex",gap:8}}>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Pergunte sobre seus plantões..." disabled={loading}
+        <input value={input} onChange={e=>setInput(e.target.value.slice(0,500))} maxLength={500} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Pergunte sobre seus plantões..." disabled={loading}
           style={{flex:1,background:"rgba(255,255,255,0.05)",border:"1px solid "+(input?C.em+"44":C.bd),borderRadius:12,padding:"11px 14px",color:C.tx0,fontSize:13,outline:"none",fontFamily:"inherit",transition:"border-color .2s"}}/>
         <button onClick={()=>send()} disabled={loading||!input.trim()}
           style={{padding:"11px 18px",background:input.trim()&&!loading?"linear-gradient(135deg,"+C.em+","+C.cy+")":C.bd,border:"none",borderRadius:12,color:"#021810",fontWeight:800,cursor:input.trim()&&!loading?"pointer":"default",fontSize:13,transition:"all .2s",flexShrink:0}}>
@@ -448,17 +453,35 @@ function BgOrbs() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   LOCAL STORAGE HOOK
+═══════════════════════════════════════════════════════ */
+function useLocalStorage(key,initial){
+  const[val,setVal]=useState(()=>{
+    try{const s=localStorage.getItem(key);return s!==null?JSON.parse(s):initial;}
+    catch{return initial;}
+  });
+  const set=useCallback(v=>{
+    setVal(prev=>{
+      const next=typeof v==="function"?v(prev):v;
+      try{localStorage.setItem(key,JSON.stringify(next));}catch{}
+      return next;
+    });
+  },[key]);
+  return[val,set];
+}
+
+/* ═══════════════════════════════════════════════════════
    MAIN APP
 ═══════════════════════════════════════════════════════ */
 export default function App() {
-  const [screen,setScreen]     = useState("onboard");
+  const [screen,setScreen]     = useLocalStorage("pb_screen","onboard");
   const [obStep,setObStep]     = useState(0);
   const [tab,setTab]           = useState("dashboard");
-  const [name,setName]         = useState("");
+  const [name,setName]         = useLocalStorage("pb_name","");
   const [botOn,setBotOn]       = useState(false);
   const [feed,setFeed]         = useState([]);
   const [typing,setTyping]     = useState(null);
-  const [captured,setCaptured] = useState([]);
+  const [captured,setCaptured] = useLocalStorage("pb_captured",[]);
   const [rejected,setRejected] = useState([]);
   const [pending,setPending]   = useState([]);  // for swipe mode
   const [toasts,setToasts]     = useState([]);
@@ -466,9 +489,9 @@ export default function App() {
   const [notifOpen,setNotifOpen] = useState(false);
   const [confetti,setConfetti] = useState(false);
   const [modal,setModal]       = useState(null);
-  const [groups,setGroups]     = useState(GROUPS);
+  const [groups,setGroups]     = useLocalStorage("pb_groups",GROUPS);
   const [monthly,setMonthly]   = useState(MONTHLY);
-  const [prefs,setPrefs]       = useState({minVal:1500,maxDist:20,days:["Sex","Sáb","Dom"],specs:["Emergência","UTI","Clínica Geral"],auto:true});
+  const [prefs,setPrefs]       = useLocalStorage("pb_prefs",{minVal:1500,maxDist:20,days:["Sex","Sáb","Dom"],specs:["Emergência","UTI","Clínica Geral"],auto:true});
   const timers=useRef([]); const feedRef=useRef(null);
   const tid=useRef(0); const nid=useRef(0);
 
@@ -534,6 +557,15 @@ export default function App() {
     setPending(p=>p.filter(x=>x.id!==shift.id));
     setRejected(p=>[...p,shift]);
   }
+  function acceptFromModal(shift){
+    if(captured.some(c=>c.id===shift.id)) return;
+    setCaptured(p=>[...p,{...shift,capturedAt:nowT()}]);
+    setMonthly(p=>p.map(x=>x.m==="Mar"?{...x,v:x.v+shift.val}:x));
+    setPending(p=>p.filter(x=>x.id!==shift.id));
+    if(shift.val>=3000){setConfetti(true);setTimeout(()=>setConfetti(false),2500);}
+    toast("✅ Plantão aceito!",shift.hospital+" — R$ "+fmt(shift.val),"win");
+    addNotif("✅ Plantão capturado!",shift.hospital+" · "+shift.date+" · R$ "+fmt(shift.val),"win");
+  }
 
   const total=captured.reduce((a,s)=>a+s.val,0);
   const actG=groups.filter(g=>g.active);
@@ -544,7 +576,7 @@ export default function App() {
     {icon:"🤖",title:"PlantãoBot v5",sub:"Automação de plantões com IA integrada",
      body:<div>
        <label style={S.lbl}>Seu nome</label>
-       <input value={name} onChange={e=>setName(e.target.value)} placeholder="Dr(a). Seu Nome" style={S.inp} autoFocus/>
+       <input value={name} onChange={e=>setName(e.target.value.slice(0,60))} maxLength={60} placeholder="Dr(a). Seu Nome" style={S.inp} autoFocus/>
        <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:18}}>
          {[["🔍","Monitoramento 24/7","Lê WhatsApp enquanto você trabalha ou dorme"],["⚡","0.8s de resposta","Impossível para humanos, fácil para o bot"],["🤖","IA integrada","Assistente Claude analisa e aconselha em tempo real"]].map(([i,t,d])=>(
            <div key={t} style={{display:"flex",gap:12,padding:"12px 14px",background:C.emB,border:"1px solid "+C.em+"18",borderRadius:12}}>
@@ -657,7 +689,7 @@ export default function App() {
       <Confetti active={confetti}/>
       <Toasts items={toasts}/>
       <NotifDrawer open={notifOpen} notifs={notifs} onClose={()=>setNotifOpen(false)}/>
-      {modal&&<ShiftModal shift={modal} prefs={prefs} onClose={()=>setModal(null)}/>}
+      {modal&&<ShiftModal shift={modal} prefs={prefs} onClose={()=>setModal(null)} onAccept={acceptFromModal}/>}
 
       {/* HEADER */}
       <header style={{position:"sticky",top:0,zIndex:400,background:"rgba(2,6,15,0.85)",backdropFilter:"blur(24px)",borderBottom:"1px solid "+C.bd,padding:"0 16px",display:"flex",alignItems:"center",height:56,gap:12}}>
