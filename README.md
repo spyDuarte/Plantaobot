@@ -10,31 +10,63 @@ Demo de interface React para um assistente de captação de plantões médicos c
 
 ## Estrutura do repositório
 
-- `plantaobot_6.jsx`: componente principal da aplicação (single-file UI).
+- `src/`: código-fonte principal da aplicação React.
+- `src/utils/index.js`: funções utilitárias puras (inclui cálculo de score).
+- `.github/workflows/ci.yml`: pipeline de qualidade executada em pull requests.
 
 ## Como usar
 
-1. Crie um projeto React (ex.: Vite) ou abra o seu projeto existente.
-2. Copie `plantaobot_6.jsx` para `src/App.jsx`.
-3. Instale a dependência de gráficos:
+1. Instale as dependências:
 
    ```bash
-   npm install recharts
+   npm install
    ```
 
-4. Inicie o projeto:
+2. Inicie o projeto:
 
    ```bash
    npm run dev
    ```
 
+## Qualidade de código
+
+O projeto utiliza ESLint + Prettier e testes com Vitest + React Testing Library.
+
+- Verificar lint:
+
+  ```bash
+  npm run lint
+  ```
+
+- Corrigir lint automaticamente:
+
+  ```bash
+  npm run lint:fix
+  ```
+
+- Formatar código com Prettier:
+
+  ```bash
+  npm run format
+  ```
+
+- Executar testes:
+
+  ```bash
+  npm run test
+  ```
+
+## Contribuição
+
+1. Crie uma branch para sua mudança.
+2. Garanta que os comandos abaixo passem localmente:
+   - `npm run lint`
+   - `npm run test`
+3. Abra um Pull Request.
+
+Em PRs, a CI valida automaticamente lint e testes.
+
 ## Requisitos
 
 - Node.js 18+
-- React 18+
-- `recharts`
-
-## Observações
-
-- O componente injeta estilos globais internamente via `<style>{CSS}</style>`.
-- Os dados de plantões, grupos e notificações são mockados no próprio arquivo para fins de demonstração.
+- npm 9+
