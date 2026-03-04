@@ -54,26 +54,44 @@ src/
    npm run dev
    ```
 
-3. Gere build de produção:
+## Configuração de `VITE_BASE_PATH`
 
-   ```bash
-   npm run build
-   ```
+O projeto lê a base de publicação via variável de ambiente `VITE_BASE_PATH` no `vite.config.js`.
 
-4. Faça preview local da build:
+- **Fallback padrão:** quando `VITE_BASE_PATH` não é definida (ou está vazia), a base usada é `'/'`, ideal para desenvolvimento local.
+- A base é normalizada automaticamente para começar e terminar com `/`.
 
-   ```bash
-   npm run preview
-   ```
+### Exemplos
 
-## Convenções
+**Desenvolvimento local (root):**
 
-- **Nomenclatura de arquivos**:
-  - Componentes React em `PascalCase` (ex.: `SwipeCard.jsx`).
-  - Hooks em `camelCase` iniciando com `use` (ex.: `useLocalStorage.js`).
-  - Utilitários, constantes e dados em `camelCase`/nomes descritivos (ex.: `mockData.js`, `colors.js`).
-- **Idioma da UI**: priorizar textos em português (pt-BR), mantendo consistência de vocabulário para contexto médico.
-- **Estilo de componentes**: manter componentes funcionais, foco em responsabilidade única por arquivo e composição por pastas (`tabs`, `ui`) quando fizer sentido.
+```bash
+npm run dev
+```
+
+ou explicitamente:
+
+```bash
+VITE_BASE_PATH=/ npm run dev
+```
+
+**Build para GitHub Pages (`/Plantaobot/`):**
+
+```bash
+VITE_BASE_PATH=/Plantaobot/ npm run build
+```
+
+**Build para subpath em servidor (`/apps/plantaobot/`):**
+
+```bash
+VITE_BASE_PATH=/apps/plantaobot/ npm run build
+```
+
+> Dica: também é possível definir em arquivo `.env.production`:
+>
+> ```env
+> VITE_BASE_PATH=/Plantaobot/
+> ```
 
 ## Requisitos
 
