@@ -1,0 +1,98 @@
+%PDF-1.4
+%
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 2021 >>
+stream
+BT
+/F1 11 Tf
+50 792 Td
+18 TL
+(Plantaobot - One-Page App Summary) Tj
+T*
+() Tj
+T*
+(What it is) Tj
+T*
+(- Plantaobot is a React + Vite demo interface for an AI-assisted medical shift capture workflow.) Tj
+T*
+(- It simulates triage of shift offers, manual swipe decisions, and performance tracking in a single UI.) Tj
+T*
+() Tj
+T*
+(Who it is for) Tj
+T*
+(- Primary persona: physicians in Brazil who monitor medical shift groups and want faster, criteria-based shift selection.) Tj
+T*
+() Tj
+T*
+(What it does) Tj
+T*
+(- Onboards the user and stores profile/preferences locally.) Tj
+T*
+(- Simulates incoming group feed messages with offers and non-offer noise.) Tj
+T*
+(- Scores shift offers by value, distance, day, and specialty preferences.) Tj
+T*
+(- Auto-captures qualified offers \(or routes them to manual swipe review\).) Tj
+T*
+(- Tracks captured/rejected/pending offers with dashboard and insights views.) Tj
+T*
+(- Exports captured shifts to CSV.) Tj
+T*
+(- Provides notifications, onboarding/settings controls, and a contextual AI chat panel.) Tj
+T*
+() Tj
+T*
+(How it works \(repo-evidenced architecture\)) Tj
+T*
+(- Frontend: Single-page React app bootstrapped by Vite; App.jsx orchestrates tabs/state.) Tj
+T*
+(- Data layer: Static mock datasets \(SHIFTS/NOISE/MONTHLY/GROUPS\) drive simulation.) Tj
+T*
+(- Decision engine: calcScore\(\) in utils computes a 0-100 score from user preferences.) Tj
+T*
+(- Persistence: useLocalStorage hook stores name, screen, captured shifts, groups, and prefs in browser localStorage.) Tj
+T*
+(- UI modules: tab components \(Dashboard/Feed/Swipe/Captured/Insights/Settings\) plus AIChat, modals, notifications, and shared UI widgets.) Tj
+T*
+(- Data flow: startBot\(\) schedules timed feed events -> scoring -> captured/rejected/pending arrays -> dashboard/insights totals and CSV export.) Tj
+T*
+(- Backend/API: Not found in repo.) Tj
+T*
+() Tj
+T*
+(How to run \(minimal\)) Tj
+T*
+(- Requirements: Node.js 18+ and npm 9+.) Tj
+T*
+(- Install: npm install) Tj
+T*
+(- Start dev server: npm run dev) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000317 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2390
+%%EOF
