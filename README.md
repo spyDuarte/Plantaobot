@@ -10,31 +10,36 @@ Demo de interface React para um assistente de captação de plantões médicos c
 
 ## Estrutura do repositório
 
-- `plantaobot_6.jsx`: componente principal da aplicação (single-file UI).
+- `src/main.jsx`: ponto de entrada da aplicação (renderiza `src/App.jsx`).
+- `src/App.jsx`: shell principal da UI.
+- `src/components/*`: componentes React em `PascalCase`.
+- `src/hooks/useLocalStorage.js`: hook customizado em `camelCase` com prefixo `use`.
 
 ## Como usar
 
-1. Crie um projeto React (ex.: Vite) ou abra o seu projeto existente.
-2. Copie `plantaobot_6.jsx` para `src/App.jsx`.
-3. Instale a dependência de gráficos:
+1. Instale as dependências:
 
    ```bash
-   npm install recharts
+   npm install
    ```
 
-4. Inicie o projeto:
+2. Inicie o projeto:
 
    ```bash
    npm run dev
    ```
 
+3. Para gerar build de produção:
+
+   ```bash
+   npm run build
+   ```
+
 ## Requisitos
 
 - Node.js 18+
-- React 18+
-- `recharts`
+- npm 9+
 
 ## Observações
 
-- O componente injeta estilos globais internamente via `<style>{CSS}</style>`.
-- Os dados de plantões, grupos e notificações são mockados no próprio arquivo para fins de demonstração.
+- Os dados de plantões, grupos e notificações são mockados para fins de demonstração.
