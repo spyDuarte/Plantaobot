@@ -54,6 +54,10 @@ src/
    npm run dev
    ```
 
+## Planejamento de evolução
+
+O roadmap de melhorias sugerido está em `PLANO_MELHORIAS.md`, com fases, backlog priorizado e indicadores de sucesso.
+
 ## Qualidade de código
 
 O projeto utiliza ESLint + Prettier e testes com Vitest + React Testing Library.
