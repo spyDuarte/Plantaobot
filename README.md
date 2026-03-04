@@ -10,7 +10,9 @@ Demo de interface React para um assistente de captação de plantões médicos c
 
 ## Estrutura do projeto
 
-A aplicação está organizada em múltiplos módulos dentro de `src/`.
+- `src/`: código-fonte principal da aplicação React.
+- `src/utils/index.js`: funções utilitárias puras (inclui cálculo de score).
+- `.github/workflows/ci.yml`: pipeline de qualidade executada em pull requests.
 
 ```text
 src/
@@ -40,53 +42,57 @@ src/
     └── index.js
 ```
 
-## Fluxo de execução
-
 1. Instale as dependências:
 
    ```bash
    npm install
    ```
 
-2. Rode em desenvolvimento:
+2. Inicie o projeto:
 
    ```bash
    npm run dev
    ```
 
-3. Gere build de produção:
+## Qualidade de código
 
-   ```bash
-   npm run build
-   ```
+O projeto utiliza ESLint + Prettier e testes com Vitest + React Testing Library.
 
-4. Faça preview local da build:
+- Verificar lint:
 
-   ```bash
-   npm run preview
-   ```
+  ```bash
+  npm run lint
+  ```
 
-## Convenções
+- Corrigir lint automaticamente:
 
-- **Nomenclatura de arquivos**:
-  - Componentes React em `PascalCase` (ex.: `SwipeCard.jsx`).
-  - Hooks em `camelCase` iniciando com `use` (ex.: `useLocalStorage.js`).
-  - Utilitários, constantes e dados em `camelCase`/nomes descritivos (ex.: `mockData.js`, `colors.js`).
-- **Idioma da UI**: priorizar textos em português (pt-BR), mantendo consistência de vocabulário para contexto médico.
-- **Estilo de componentes**: manter componentes funcionais, foco em responsabilidade única por arquivo e composição por pastas (`tabs`, `ui`) quando fizer sentido.
+  ```bash
+  npm run lint:fix
+  ```
+
+- Formatar código com Prettier:
+
+  ```bash
+  npm run format
+  ```
+
+- Executar testes:
+
+  ```bash
+  npm run test
+  ```
+
+## Contribuição
+
+1. Crie uma branch para sua mudança.
+2. Garanta que os comandos abaixo passem localmente:
+   - `npm run lint`
+   - `npm run test`
+3. Abra um Pull Request.
+
+Em PRs, a CI valida automaticamente lint e testes.
 
 ## Requisitos
 
 - Node.js 18+
 - npm 9+
-
-## Qualidade
-
-No estado atual, o projeto não possui comandos de lint/test configurados em `package.json`.
-
-Quando esses scripts forem introduzidos, esta seção deve ser atualizada com comandos como:
-
-```bash
-npm run lint
-npm test
-```
