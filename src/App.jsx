@@ -30,6 +30,15 @@ import { getFeatureFlags } from "./config/featureFlags.js";
 import { createNotification, createNavItem, createToast } from "./models/uiModels.js";
 import { normalizeShiftCollection } from "./utils/shiftViewModel.js";
 import {
+  DEFAULT_GROWTH_METRICS,
+  areGrowthMetricsEqual,
+  hasInviteQueryParams,
+  hasValidReferralCode,
+  isNormalizedGrowthMetrics,
+  normalizeGrowthMetrics,
+  normalizeReferralCode,
+} from "./utils/growthTracking.js";
+import {
   fetchMonitorStatus,
   startMonitoring,
   stopMonitoring,
@@ -56,11 +65,7 @@ const DEFAULT_PREFS = {
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const POLL_MS = Number(import.meta.env.VITE_MONITOR_POLL_MS || 10000);
-const GROWTH_METRICS_DEFAULT = {
-  share_clicked: 0,
-  share_ready: 0,
-  invite_accepted: 0,
-};
+
 
 function normalizePrefs(input) {
   if (!input || typeof input !== "object") {
@@ -215,7 +220,7 @@ export default function App() {
   const [feedError, setFeedError] = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [prefs, setPrefs] = useLocalStorage("pb_prefs", DEFAULT_PREFS);
-  const [growthMetrics, setGrowthMetrics] = useLocalStorage("pb_growth_metrics", GROWTH_METRICS_DEFAULT);
+  const [growthMetrics, setGrowthMetrics] = useLocalStorage("pb_growth_metrics", DEFAULT_GROWTH_METRICS);
   const [referralCode, setReferralCode] = useLocalStorage("pb_referral_code", "");
   const [lastShareAt, setLastShareAt] = useLocalStorage("pb_last_share_at", "");
 
@@ -270,10 +275,7 @@ export default function App() {
     }
 
     setGrowthMetrics((previous) => {
-      const safePrevious =
-        previous && typeof previous === "object" && !Array.isArray(previous)
-          ? previous
-          : GROWTH_METRICS_DEFAULT;
+      const safePrevious = normalizeGrowthMetrics(previous);
 
       return {
         ...safePrevious,
@@ -525,8 +527,16 @@ export default function App() {
   }, [feed]);
 
   useEffect(() => {
-    const hasValidReferral = typeof referralCode === "string" && referralCode.trim().length >= 6;
-    if (hasValidReferral) {
+    const normalized = normalizeGrowthMetrics(growthMetrics);
+    if (isNormalizedGrowthMetrics(growthMetrics) && areGrowthMetricsEqual(growthMetrics, normalized)) {
+      return;
+    }
+
+    setGrowthMetrics(normalized);
+  }, [growthMetrics, setGrowthMetrics]);
+
+  useEffect(() => {
+    if (hasValidReferralCode(referralCode)) {
       return;
     }
 
@@ -548,11 +558,15 @@ export default function App() {
     };
 
     const params = new URLSearchParams(window.location.search);
-    const sourceCodeRaw = params.get("ref");
-    const sourceCode = String(sourceCodeRaw || "").trim().toLowerCase();
-    const currentCode = String(referralCode || "").trim().toLowerCase();
+    if (!hasInviteQueryParams(params)) {
+      return;
+    }
+
+    const sourceCode = normalizeReferralCode(params.get("ref"));
+    const currentCode = normalizeReferralCode(referralCode);
 
     if (!sourceCode) {
+      clearInviteParams();
       return;
     }
 
@@ -747,7 +761,7 @@ export default function App() {
       ref: activeCode,
     };
 
-    void trackGrowth("share_clicked", {
+    void trackGrowth("share_intent", {
       ...trackPayload,
       trigger: "captured_tab",
     });
@@ -761,7 +775,7 @@ export default function App() {
         });
 
         setLastShareAt(new Date().toISOString());
-        void trackGrowth("share_ready", {
+        void trackGrowth("share_clicked", {
           ...trackPayload,
           channel: "native_share",
         });
@@ -779,7 +793,7 @@ export default function App() {
 
     if (popup) {
       setLastShareAt(new Date().toISOString());
-      void trackGrowth("share_ready", {
+      void trackGrowth("share_clicked", {
         ...trackPayload,
         channel: "whatsapp",
       });
@@ -793,7 +807,7 @@ export default function App() {
         throw new Error("copy_failed");
       }
       setLastShareAt(new Date().toISOString());
-      void trackGrowth("share_ready", {
+      void trackGrowth("share_clicked", {
         ...trackPayload,
         channel: "copy",
       });
@@ -843,9 +857,10 @@ export default function App() {
   const capturedVm = useMemo(() => normalizeShiftCollection(captured), [captured]);
   const rejectedVm = useMemo(() => normalizeShiftCollection(rejected), [rejected]);
   const pendingVm = useMemo(() => normalizeShiftCollection(pending), [pending]);
-  const shareClickedCount = Number(growthMetrics?.share_clicked ?? 0);
-  const shareReadyCount = Number(growthMetrics?.share_ready ?? 0);
-  const inviteAcceptedCount = Number(growthMetrics?.invite_accepted ?? 0);
+  const normalizedGrowthMetrics = useMemo(() => normalizeGrowthMetrics(growthMetrics), [growthMetrics]);
+  const shareIntentCount = Number(normalizedGrowthMetrics?.share_intent ?? 0);
+  const shareReadyCount = Number(normalizedGrowthMetrics?.share_clicked ?? 0);
+  const inviteAcceptedCount = Number(normalizedGrowthMetrics?.invite_accepted ?? 0);
   const lastShareLabel = useMemo(() => {
     if (!lastShareAt) {
       return "";
@@ -930,7 +945,7 @@ export default function App() {
         total={total}
         exportCSV={exportCSV}
         onShareCaptured={shareCapturedSummary}
-        shareClicked={shareClickedCount}
+        shareClicked={shareIntentCount}
         shareReady={shareReadyCount}
         inviteAccepted={inviteAcceptedCount}
         lastShareLabel={lastShareLabel}
