@@ -58,6 +58,29 @@ describe('backend auth unit checks', () => {
     expect(response.body.error).toBe('UNAUTHORIZED');
   });
 
+  it('returns 403 for disallowed CORS origins', async () => {
+    const { app } = await buildAgent();
+
+    const response = await request(app)
+      .options('/api/auth/login')
+      .set('Origin', 'https://evil.example.com');
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('ORIGIN_NOT_ALLOWED');
+  });
+
+  it('allows preflight for configured origin', async () => {
+    const { app } = await buildAgent();
+
+    const response = await request(app)
+      .options('/api/auth/login')
+      .set('Origin', 'http://localhost:5173');
+
+    expect(response.status).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+  });
+
   it('normalizes auth service error classes', () => {
     expect(normalizeAuthError(new Error('Invalid login credentials')).status).toBe(401);
     expect(normalizeAuthError(new Error('Email not confirmed')).status).toBe(403);

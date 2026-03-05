@@ -206,3 +206,13 @@ O Vite proxy encaminha `/api` para `http://localhost:8080` (configurável por `V
 ### Schema mínimo no Supabase
 
 Use `backend/sql/001_auth_and_operational_schema.sql` para criar as tabelas mínimas (`profiles`, `preferences`, `groups`, `captures`, `rejections`, `monitor_sessions`, `events`).
+
+## Deploy do Backend (Render)
+
+Para publicar o BFF `/api` com Supabase Auth, siga o guia:
+
+- `docs/DEPLOY_BACKEND_RENDER.md`
+
+Arquivo de blueprint já incluído no repo:
+
+- `render.yaml`

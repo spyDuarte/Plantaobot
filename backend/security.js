@@ -10,8 +10,12 @@ export const COOKIE_NAMES = {
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function baseCookieOptions(config) {
+  const sameSite = ['lax', 'strict', 'none'].includes(String(config.cookieSameSite || '').toLowerCase())
+    ? String(config.cookieSameSite).toLowerCase()
+    : 'lax';
+
   const options = {
-    sameSite: 'lax',
+    sameSite,
     secure: Boolean(config.secureCookies),
     path: '/',
   };
@@ -114,3 +118,4 @@ export function csrfProtection(req, _res, next) {
 
   next();
 }
+

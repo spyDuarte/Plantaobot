@@ -38,6 +38,8 @@ function defaultConfig() {
     secureCookies: process.env.COOKIE_SECURE
       ? process.env.COOKIE_SECURE === 'true'
       : nodeEnv === 'production',
+    cookieSameSite: process.env.COOKIE_SAME_SITE || 'lax',
+    corsAllowedOrigins: process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ALLOWED_ORIGIN || '',
   };
 }
 
@@ -157,6 +159,52 @@ function parseGroupIds(queryValue) {
   return [String(queryValue)];
 }
 
+function normalizeOrigin(value) {
+  if (!value) {
+    return '';
+  }
+
+  try {
+    return new URL(String(value)).origin;
+  } catch {
+    return String(value).replace(/\/+$/, '');
+  }
+}
+
+function buildAllowedOrigins(config) {
+  const fromEnv = String(config.corsAllowedOrigins || '')
+    .split(',')
+    .map((item) => normalizeOrigin(item.trim()))
+    .filter(Boolean);
+
+  const appOrigin = normalizeOrigin(config.appBaseUrl);
+  if (appOrigin && !fromEnv.includes(appOrigin)) {
+    fromEnv.push(appOrigin);
+  }
+
+  return new Set(fromEnv);
+}
+
+function applyCors(req, res, allowedOrigins) {
+  const origin = req.get('origin');
+  if (!origin) {
+    return true;
+  }
+
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (!allowedOrigins.has(normalizedOrigin)) {
+    return false;
+  }
+
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Vary', 'Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-Token');
+
+  return true;
+}
+
 export function createApp(options = {}) {
   const config = {
     ...defaultConfig(),
@@ -173,7 +221,32 @@ export function createApp(options = {}) {
   };
 
   const app = express();
+  const allowedOrigins = buildAllowedOrigins(config);
+
   app.disable('x-powered-by');
+
+  if (String(config.cookieSameSite || 'lax').toLowerCase() === 'none' && !config.secureCookies) {
+    console.warn('[backend] COOKIE_SAME_SITE=none requer COOKIE_SECURE=true em navegadores modernos.');
+  }
+
+  app.use((req, res, next) => {
+    const allowed = applyCors(req, res, allowedOrigins);
+    if (!allowed) {
+      res.status(403).json({
+        error: 'ORIGIN_NOT_ALLOWED',
+        message: 'Origin não permitida por CORS.',
+      });
+      return;
+    }
+
+    if (req.method === 'OPTIONS') {
+      res.status(204).send();
+      return;
+    }
+
+    next();
+  });
+
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser(config.cookieSecret || undefined));
 
@@ -441,3 +514,5 @@ export function createApp(options = {}) {
 
   return app;
 }
+
+

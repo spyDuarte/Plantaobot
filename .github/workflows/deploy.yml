@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+﻿name: Deploy to GitHub Pages
 
 on:
   push:
@@ -46,6 +46,8 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_PATH: ${{ env.VITE_BASE_PATH }}
+          # Configure this secret with your backend URL (ex: https://plantaobot-api.onrender.com/api)
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           # Optional: add VITE_ANTHROPIC_API_KEY as a repository secret
           # to enable the AI chat feature on the deployed site.
           # Go to: Settings -> Secrets and variables -> Actions -> New repository secret
