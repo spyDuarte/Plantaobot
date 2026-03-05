@@ -716,19 +716,43 @@ export default function App() {
     const introName = name ? `${name} ` : "Eu ";
     const message = `${introName}capturei ${captured.length} plantoes (R$ ${fmt(total)}) com ticket medio de R$ ${fmt(avgTicket)} usando o PlantaoBot.`;
     const fullText = `${message}\nTeste aqui: ${inviteUrl}`;
-
-    void trackGrowth("share_clicked", {
-      channel: "whatsapp",
+    const trackPayload = {
       capturedCount: captured.length,
       totalValue: total,
       ref: activeCode,
-    });
+    };
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "PlantaoBot",
+          text: message,
+          url: inviteUrl,
+        });
+
+        setLastShareAt(new Date().toISOString());
+        void trackGrowth("share_clicked", {
+          ...trackPayload,
+          channel: "native_share",
+        });
+        toast("Compartilhamento pronto", "Resumo compartilhado com sucesso.", "success", "growth");
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") {
+          return;
+        }
+      }
+    }
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(fullText)}`;
     const popup = typeof window !== "undefined" ? window.open(whatsappUrl, "_blank", "noopener,noreferrer") : null;
 
     if (popup) {
       setLastShareAt(new Date().toISOString());
+      void trackGrowth("share_clicked", {
+        ...trackPayload,
+        channel: "whatsapp",
+      });
       toast("Compartilhamento pronto", "Mensagem aberta no WhatsApp para voce enviar.", "success", "growth");
       return;
     }
@@ -739,6 +763,10 @@ export default function App() {
         throw new Error("copy_failed");
       }
       setLastShareAt(new Date().toISOString());
+      void trackGrowth("share_clicked", {
+        ...trackPayload,
+        channel: "copy",
+      });
       toast("Link copiado", "Mensagem pronta para colar no WhatsApp.", "success", "growth");
     } catch {
       toast("Falha ao compartilhar", "Nao foi possivel abrir o WhatsApp nem copiar a mensagem.", "warning", "growth");
