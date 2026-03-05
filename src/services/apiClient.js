@@ -1,16 +1,20 @@
-function trimTrailingSlash(value) {
-  return value.replace(/\/+$/, "");
+﻿function trimTrailingSlash(value) {
+  return value.replace(/\/+$/, '');
 }
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
-export const API_BASE_URL = rawBaseUrl.startsWith("http")
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+export const API_BASE_URL = rawBaseUrl.startsWith('http')
   ? trimTrailingSlash(rawBaseUrl)
-  : trimTrailingSlash(rawBaseUrl.startsWith("/") ? rawBaseUrl : `/${rawBaseUrl}`);
+  : trimTrailingSlash(rawBaseUrl.startsWith('/') ? rawBaseUrl : `/${rawBaseUrl}`);
+
+const CSRF_COOKIE_NAME = 'pb_csrf';
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+let csrfPrimePromise = null;
 
 export class ApiError extends Error {
   constructor(message, { status, data, path } = {}) {
     super(message);
-    this.name = "ApiError";
+    this.name = 'ApiError';
     this.status = status;
     this.data = data;
     this.path = path;
@@ -18,7 +22,7 @@ export class ApiError extends Error {
 }
 
 function buildUrl(path, query) {
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const base = `${API_BASE_URL}${cleanPath}`;
 
   if (!query || Object.keys(query).length === 0) {
@@ -27,13 +31,13 @@ function buildUrl(path, query) {
 
   const params = new URLSearchParams();
   Object.entries(query).forEach(([key, value]) => {
-    if (value == null || value === "") {
+    if (value == null || value === '') {
       return;
     }
 
     if (Array.isArray(value)) {
       value.forEach((item) => {
-        if (item != null && item !== "") {
+        if (item != null && item !== '') {
           params.append(key, String(item));
         }
       });
@@ -47,13 +51,86 @@ function buildUrl(path, query) {
   return queryString ? `${base}?${queryString}` : base;
 }
 
+function parseCookies() {
+  if (typeof document === 'undefined') {
+    return new Map();
+  }
+
+  const map = new Map();
+  const raw = document.cookie || '';
+  raw.split(';').forEach((chunk) => {
+    const [rawKey, ...rawValue] = chunk.split('=');
+    const key = rawKey?.trim();
+    if (!key) {
+      return;
+    }
+
+    map.set(key, decodeURIComponent(rawValue.join('=').trim()));
+  });
+
+  return map;
+}
+
+export function readCookie(name) {
+  return parseCookies().get(name) || '';
+}
+
+export function getCsrfToken() {
+  return readCookie(CSRF_COOKIE_NAME);
+}
+
+async function primeCsrfCookie() {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const existing = getCsrfToken();
+  if (existing) {
+    return existing;
+  }
+
+  if (!csrfPrimePromise) {
+    csrfPrimePromise = fetch(`${API_BASE_URL}/auth/me`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+      .catch(() => null)
+      .finally(() => {
+        csrfPrimePromise = null;
+      });
+  }
+
+  await csrfPrimePromise;
+  return getCsrfToken();
+}
+
+function shouldAttachJsonBody(body) {
+  return body !== undefined && body !== null;
+}
+
+function buildHeaders({ method, headers, body, csrfToken }) {
+  const next = {
+    ...(headers || {}),
+  };
+
+  if (shouldAttachJsonBody(body) && !('Content-Type' in next)) {
+    next['Content-Type'] = 'application/json';
+  }
+
+  if (csrfToken && MUTATING_METHODS.has(method) && !('X-CSRF-Token' in next)) {
+    next['X-CSRF-Token'] = csrfToken;
+  }
+
+  return next;
+}
+
 async function parseResponseBody(response) {
   if (response.status === 204) {
     return null;
   }
 
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
     return response.json();
   }
 
@@ -61,31 +138,49 @@ async function parseResponseBody(response) {
   return text || null;
 }
 
+function dispatchUnauthorized(path) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent('pb-auth-unauthorized', {
+      detail: { path },
+    }),
+  );
+}
+
 export async function apiRequest(path, options = {}) {
   const {
-    method = "GET",
+    method: rawMethod = 'GET',
     body,
     query,
     headers,
     signal,
   } = options;
 
+  const method = String(rawMethod).toUpperCase();
+  const isMutating = MUTATING_METHODS.has(method);
+  const csrfToken = isMutating ? (getCsrfToken() || (await primeCsrfCookie())) : '';
+
   const url = buildUrl(path, query);
   const response = await fetch(url, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    body: body == null ? undefined : JSON.stringify(body),
+    headers: buildHeaders({ method, headers, body, csrfToken }),
+    body: shouldAttachJsonBody(body) ? JSON.stringify(body) : undefined,
     signal,
+    credentials: 'include',
   });
 
   const data = await parseResponseBody(response);
 
   if (!response.ok) {
+    if (response.status === 401 && !String(path).startsWith('/auth/')) {
+      dispatchUnauthorized(path);
+    }
+
     const message =
-      typeof data === "string"
+      typeof data === 'string'
         ? data
         : data?.message || data?.error || `Request failed (${response.status})`;
     throw new ApiError(message, {
