@@ -160,3 +160,49 @@ A aplica��o agora usa **integra��o real via API HTTP** para monitoramento e capt
 - `POST /events` (opcional; telemetria de crescimento para compartilhamentos/convites)
 
 Se a API estiver indispon�vel, o app exibe erro operacional em vez de iniciar uma simula��o local.
+
+## Sistema de Cadastro/Login (Supabase + BFF)
+
+O repositório agora inclui um backend próprio em `backend/` para autenticação com sessão via cookies httpOnly.
+
+### Rodando localmente
+
+1. Suba o backend:
+
+```bash
+npm run dev:backend
+```
+
+2. Em outro terminal, suba o frontend:
+
+```bash
+npm run dev
+```
+
+O Vite proxy encaminha `/api` para `http://localhost:8080` (configurável por `VITE_BACKEND_ORIGIN`).
+
+### Variáveis de ambiente do backend
+
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `APP_BASE_URL`
+- `COOKIE_SECRET`
+- `COOKIE_DOMAIN`
+- `COOKIE_SECURE`
+
+### Contratos de auth
+
+- `POST /api/auth/signup` `{ name, email, password }`
+- `POST /api/auth/login` `{ email, password }`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `POST /api/auth/resend-verification` `{ email }`
+- `POST /api/auth/forgot-password` `{ email }`
+- `POST /api/auth/confirm` `{ token_hash, type }`
+- `POST /api/auth/reset-password` `{ newPassword }`
+- `POST /api/auth/bootstrap-import` `{ prefs, groups, captured, rejected }`
+
+### Schema mínimo no Supabase
+
+Use `backend/sql/001_auth_and_operational_schema.sql` para criar as tabelas mínimas (`profiles`, `preferences`, `groups`, `captures`, `rejections`, `monitor_sessions`, `events`).

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+﻿import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 function resolveBasePath() {
@@ -22,9 +22,18 @@ function resolveBasePath() {
 export default defineConfig({
   plugins: [react()],
   base: resolveBasePath(),
+  server: {
+    proxy: {
+      '/api': {
+        target: process.env.VITE_BACKEND_ORIGIN || 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     globals: true,
   },
 });
+
