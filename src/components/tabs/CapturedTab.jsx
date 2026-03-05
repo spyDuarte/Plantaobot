@@ -2,8 +2,22 @@ import { C } from "../../constants/colors.js";
 import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, EmptyState, PageHeader, Pill, ScBar } from "../ui/index.jsx";
 
-export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV, onShareCaptured, shareClicked = 0, inviteAccepted = 0, lastShareLabel = "", setModal }) {
-  const inviteRate = shareClicked > 0 ? Math.round((inviteAccepted / shareClicked) * 100) : null;
+export default function CapturedTab({
+  uiV2,
+  captured,
+  rejected,
+  total,
+  exportCSV,
+  onShareCaptured,
+  shareClicked = 0,
+  shareReady = 0,
+  inviteAccepted = 0,
+  lastShareLabel = "",
+  setModal,
+}) {
+  const shareReadyRate = shareClicked > 0 ? Math.round((shareReady / shareClicked) * 100) : null;
+  const inviteRate = shareReady > 0 ? Math.round((inviteAccepted / shareReady) * 100) : null;
+
   return (
     <div style={{ animation: "fadeUp .25s both" }}>
       {uiV2 ? (
@@ -44,9 +58,9 @@ export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV
           <Card muted style={{ marginBottom: 10, borderColor: "rgba(34, 120, 166, 0.24)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <div style={{ fontSize: 12, color: C.text1 }}>
-                Compartilhamentos: <strong>{shareClicked}</strong>
+                Cliques em compartilhar: <strong>{shareClicked}</strong>
               </div>
-              <Badge tone="info">{inviteAccepted} convites abertos</Badge>
+              <Badge tone="info">{shareReady} envios prontos</Badge>
             </div>
             <div style={{ marginTop: 8, fontSize: 11, color: C.text2 }}>
               {lastShareLabel
@@ -54,7 +68,10 @@ export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV
                 : "Compartilhe seu total para convidar colegas da sua rede."}
             </div>
             <div style={{ marginTop: 4, fontSize: 11, color: C.text2 }}>
-              Taxa convite/compartilhamento: <strong>{inviteRate != null ? `${inviteRate}%` : "--"}</strong>
+              Taxa clique-envio: <strong>{shareReadyRate != null ? `${shareReadyRate}%` : "--"}</strong>
+            </div>
+            <div style={{ marginTop: 4, fontSize: 11, color: C.text2 }}>
+              Convites abertos: <strong>{inviteAccepted}</strong> (taxa convite-envio: <strong>{inviteRate != null ? `${inviteRate}%` : "--"}</strong>)
             </div>
             {!uiV2 ? (
               <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>

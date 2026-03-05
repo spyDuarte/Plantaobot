@@ -58,6 +58,7 @@ const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "S
 const POLL_MS = Number(import.meta.env.VITE_MONITOR_POLL_MS || 10000);
 const GROWTH_METRICS_DEFAULT = {
   share_clicked: 0,
+  share_ready: 0,
   invite_accepted: 0,
 };
 
@@ -231,6 +232,7 @@ export default function App() {
   const processedOffersRef = useRef(new Set());
   const prefsSyncReadyRef = useRef(false);
   const groupsSyncReadyRef = useRef(false);
+  const inviteSeenRef = useRef(new Set());
 
   const toast = useCallback((title, message, severity = "success", source = "system") => {
     const id = ++tid.current;
@@ -267,10 +269,17 @@ export default function App() {
       return;
     }
 
-    setGrowthMetrics((previous) => ({
-      ...previous,
-      [eventName]: Number(previous?.[eventName] ?? 0) + 1,
-    }));
+    setGrowthMetrics((previous) => {
+      const safePrevious =
+        previous && typeof previous === "object" && !Array.isArray(previous)
+          ? previous
+          : GROWTH_METRICS_DEFAULT;
+
+      return {
+        ...safePrevious,
+        [eventName]: Number(safePrevious?.[eventName] ?? 0) + 1,
+      };
+    });
 
     try {
       await trackGrowthEvent(eventName, payload);
@@ -516,7 +525,8 @@ export default function App() {
   }, [feed]);
 
   useEffect(() => {
-    if (referralCode) {
+    const hasValidReferral = typeof referralCode === "string" && referralCode.trim().length >= 6;
+    if (hasValidReferral) {
       return;
     }
 
@@ -528,21 +538,41 @@ export default function App() {
       return;
     }
 
+    const clearInviteParams = () => {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("ref");
+      cleanUrl.searchParams.delete("ref_name");
+      cleanUrl.searchParams.delete("utm_source");
+      const nextPath = `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`;
+      window.history.replaceState({}, "", nextPath);
+    };
+
     const params = new URLSearchParams(window.location.search);
-    const sourceCode = params.get("ref");
-    if (!sourceCode || sourceCode === referralCode) {
+    const sourceCodeRaw = params.get("ref");
+    const sourceCode = String(sourceCodeRaw || "").trim().toLowerCase();
+    const currentCode = String(referralCode || "").trim().toLowerCase();
+
+    if (!sourceCode) {
+      return;
+    }
+
+    if (sourceCode === currentCode || inviteSeenRef.current.has(sourceCode)) {
+      clearInviteParams();
       return;
     }
 
     const dedupeKey = `pb_invite_seen_${sourceCode}`;
     try {
       if (window.localStorage.getItem(dedupeKey)) {
+        clearInviteParams();
         return;
       }
       window.localStorage.setItem(dedupeKey, "1");
     } catch {
       // If storage is unavailable, continue and keep non-blocking behavior.
     }
+
+    inviteSeenRef.current.add(sourceCode);
 
     void trackGrowth("invite_accepted", {
       ref: sourceCode,
@@ -554,12 +584,7 @@ export default function App() {
       toast("Convite detectado", `Voce chegou por um convite de ${inviterName}.`, "info", "growth");
     }
 
-    const cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.delete("ref");
-    cleanUrl.searchParams.delete("ref_name");
-    cleanUrl.searchParams.delete("utm_source");
-    const nextPath = `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`;
-    window.history.replaceState({}, "", nextPath);
+    clearInviteParams();
   }, [referralCode, toast, trackGrowth]);
 
   useEffect(() => {
@@ -722,6 +747,11 @@ export default function App() {
       ref: activeCode,
     };
 
+    void trackGrowth("share_clicked", {
+      ...trackPayload,
+      trigger: "captured_tab",
+    });
+
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({
@@ -731,7 +761,7 @@ export default function App() {
         });
 
         setLastShareAt(new Date().toISOString());
-        void trackGrowth("share_clicked", {
+        void trackGrowth("share_ready", {
           ...trackPayload,
           channel: "native_share",
         });
@@ -749,7 +779,7 @@ export default function App() {
 
     if (popup) {
       setLastShareAt(new Date().toISOString());
-      void trackGrowth("share_clicked", {
+      void trackGrowth("share_ready", {
         ...trackPayload,
         channel: "whatsapp",
       });
@@ -763,7 +793,7 @@ export default function App() {
         throw new Error("copy_failed");
       }
       setLastShareAt(new Date().toISOString());
-      void trackGrowth("share_clicked", {
+      void trackGrowth("share_ready", {
         ...trackPayload,
         channel: "copy",
       });
@@ -814,6 +844,7 @@ export default function App() {
   const rejectedVm = useMemo(() => normalizeShiftCollection(rejected), [rejected]);
   const pendingVm = useMemo(() => normalizeShiftCollection(pending), [pending]);
   const shareClickedCount = Number(growthMetrics?.share_clicked ?? 0);
+  const shareReadyCount = Number(growthMetrics?.share_ready ?? 0);
   const inviteAcceptedCount = Number(growthMetrics?.invite_accepted ?? 0);
   const lastShareLabel = useMemo(() => {
     if (!lastShareAt) {
@@ -900,6 +931,7 @@ export default function App() {
         exportCSV={exportCSV}
         onShareCaptured={shareCapturedSummary}
         shareClicked={shareClickedCount}
+        shareReady={shareReadyCount}
         inviteAccepted={inviteAcceptedCount}
         lastShareLabel={lastShareLabel}
         setModal={setModal}
