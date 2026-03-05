@@ -3,6 +3,7 @@ import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, EmptyState, PageHeader, Pill, ScBar } from "../ui/index.jsx";
 
 export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV, onShareCaptured, shareClicked = 0, inviteAccepted = 0, lastShareLabel = "", setModal }) {
+  const inviteRate = shareClicked > 0 ? Math.round((inviteAccepted / shareClicked) * 100) : null;
   return (
     <div style={{ animation: "fadeUp .25s both" }}>
       {uiV2 ? (
@@ -51,6 +52,9 @@ export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV
               {lastShareLabel
                 ? `Ultimo compartilhamento preparado as ${lastShareLabel}.`
                 : "Compartilhe seu total para convidar colegas da sua rede."}
+            </div>
+            <div style={{ marginTop: 4, fontSize: 11, color: C.text2 }}>
+              Taxa convite/compartilhamento: <strong>{inviteRate != null ? `${inviteRate}%` : "--"}</strong>
             </div>
             {!uiV2 ? (
               <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
