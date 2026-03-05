@@ -1,101 +1,140 @@
 # Plano de melhorias — Plantaobot
 
 ## Objetivo
-Evoluir o protótipo atual para uma base mais confiável, testável e pronta para integração real com backend, sem perder a agilidade de entrega de UI.
+Evoluir o produto de protótipo funcional para uma aplicação confiável em produção, com foco em qualidade, integração backend, observabilidade e melhor experiência de uso.
 
-## Diagnóstico rápido do estado atual
-- A aplicação já está modularizada por tabs e componentes (`src/components`, `src/components/tabs`), mas a orquestração principal ainda concentra muitas responsabilidades no `App.jsx`.
-- Existem testes unitários para utilitários (`src/utils/index.test.js`), porém faltam testes de fluxo dos componentes principais (captura, swipe, exportação e configurações).
-- Há persistência parcial em `localStorage` (nome, tela, capturas, grupos, preferências), mas outros estados críticos ainda vivem apenas em memória.
-- O fluxo é atualmente baseado em dados mockados (`src/data/mockData.js`), o que facilita demo, mas limita evolução para cenários reais.
+## Diagnóstico do cenário atual
+- O frontend já possui boa separação por componentes e tabs, mas ainda depende de estados centralizados com alta responsabilidade no fluxo principal.
+- Existem testes em utilitários e API, porém faltam testes de jornada de usuário ponta a ponta (captura, swipe, preferências e autenticação).
+- Backend já contém estrutura de autenticação e validação, mas precisa reforçar contratos, monitoramento e cobertura de testes de integração.
+- Persistência local e dados mockados ajudam no desenvolvimento rápido, mas criam lacunas para comportamento consistente em ambiente real.
 
-## Princípios para priorização
-1. **Confiabilidade primeiro**: reduzir risco de regressão em fluxos críticos.
-2. **Base para escalar depois**: preparar arquitetura para backend sem reescrever tudo.
-3. **Entrega incremental**: dividir mudanças em PRs pequenos, reversíveis e testáveis.
+## Princípios de execução
+1. **Confiabilidade antes de velocidade**: primeiro eliminar riscos de regressão.
+2. **Incremental e reversível**: entregas pequenas, com rollback simples.
+3. **Medição contínua**: toda melhoria precisa de indicador de sucesso.
+4. **Pronto para produção**: segurança, logs e documentação não são opcionais.
 
-## Roadmap proposto (6 semanas)
+---
 
-### Fase 1 (Semana 1–2) — Qualidade e segurança funcional
-**Meta:** aumentar previsibilidade do comportamento atual.
+## Roadmap de melhorias (90 dias)
 
-- Criar testes de interface para:
-  - início/parada do bot;
-  - aceitação/rejeição no modo swipe;
-  - aceitação via modal;
-  - exportação CSV com dados capturados.
-- Cobrir componentes com maior risco de regressão:
-  - `ShiftModal`, `SwipeTab`, `CapturedTab`, `SettingsTab`.
-- Adicionar validação de entradas de usuário:
-  - sanitização básica do nome no onboarding;
-  - limite de tamanho e normalização no chat.
-- Padronizar mensagens de feedback (toast/notificação) com tipagem única (`success`, `info`, `error`).
+### Fase 1 (Semanas 1–3) — Estabilização de fluxos críticos
+**Meta:** reduzir bugs nos fluxos de maior valor.
 
-**Resultado esperado:** mais segurança para refatorar sem quebrar fluxos existentes.
+#### Entregas
+- Cobrir jornadas críticas com testes de interface e integração:
+  - login/logout;
+  - aceitar/rejeitar item no swipe;
+  - captura manual e exportação;
+  - atualização de preferências.
+- Padronizar validações de entrada (frontend + backend):
+  - limites de tamanho;
+  - normalização/sanitização;
+  - mensagens de erro consistentes.
+- Criar checklist de regressão para PRs (autenticação, captura, exportação, notificações).
 
-### Fase 2 (Semana 3–4) — Arquitetura e estado
-**Meta:** reduzir complexidade do `App` e facilitar manutenção.
+#### Indicadores de sucesso
+- Cobertura dos fluxos críticos >= 70%.
+- Redução de bugs funcionais em homologação em pelo menos 40%.
 
-- Migrar o gerenciamento principal para `useReducer` + ações explícitas.
-- Extrair lógica de domínio para hooks/serviços:
-  - simulação do bot;
-  - cálculo e atualização de métricas mensais;
-  - ações de captura/rejeição.
-- Consolidar persistência:
-  - manter em `localStorage` tudo que afeta experiência do usuário ao recarregar.
-- Introduzir camada de mapeamento de dados (`ShiftDTO -> ShiftViewModel`) para desacoplar UI de origem dos dados.
+---
 
-**Resultado esperado:** código mais legível, previsível e com menor acoplamento.
+### Fase 2 (Semanas 4–7) — Arquitetura e integração backend
+**Meta:** diminuir acoplamento e facilitar evolução.
 
-### Fase 3 (Semana 5–6) — Preparação para backend e UX
-**Meta:** deixar o app pronto para integração real.
+#### Entregas
+- Refatorar estado principal para `useReducer`/ações explícitas.
+- Extrair lógica de domínio para hooks/serviços reutilizáveis.
+- Consolidar camada de API:
+  - contratos claros por endpoint;
+  - tratamento de erros unificado;
+  - fallback controlado para mocks via feature flag.
+- Definir e documentar contrato mínimo da API (ex.: OpenAPI enxuta).
 
-- Definir contrato HTTP mínimo (OpenAPI simples ou documento JSON):
-  - `GET /shifts`;
-  - `POST /captures`;
-  - `GET/PUT /preferences`.
-- Criar adaptador de API com fallback para mock local (feature flag).
-- Implementar estados de carregamento/erro em tabs de feed, capturados e IA.
-- Melhorias de acessibilidade:
+#### Indicadores de sucesso
+- Redução do tamanho e complexidade do componente principal.
+- Menor duplicação de lógica de negócio entre tabs.
+- Tempo médio de implementação de nova funcionalidade reduzido.
+
+---
+
+### Fase 3 (Semanas 8–10) — UX, acessibilidade e observabilidade
+**Meta:** melhorar experiência e dar visibilidade operacional.
+
+#### Entregas
+- Acessibilidade:
   - foco visível consistente;
-  - labels/roles em controles críticos;
-  - navegação por teclado em modal.
+  - labels e roles corretos;
+  - navegação por teclado em componentes interativos.
+- UX:
+  - estados de loading/erro vazios padronizados;
+  - feedback visual unificado para sucesso, aviso e erro.
+- Observabilidade:
+  - logs estruturados no backend;
+  - eventos de produto (captura, rejeição, erro);
+  - monitoramento básico de falhas por endpoint.
 
-**Resultado esperado:** pronto para trocar mock por backend progressivamente, sem ruptura de UX.
+#### Indicadores de sucesso
+- Queda na taxa de abandono em fluxos de captura.
+- Tempo de diagnóstico de erro reduzido em incidentes reais.
 
-## Backlog técnico priorizado
+---
+
+### Fase 4 (Semanas 11–12) — Hardening e preparação de release
+**Meta:** elevar confiança para release contínuo.
+
+#### Entregas
+- Revisão de segurança:
+  - validação de permissões;
+  - rate limiting e headers de segurança;
+  - revisão de dados sensíveis em logs.
+- Pipeline de qualidade:
+  - lint + testes + build como gates obrigatórios.
+- Documentação operacional:
+  - runbook de deploy/rollback;
+  - guia de troubleshooting;
+  - definição de SLO inicial.
+
+#### Indicadores de sucesso
+- Build quebrado em main próximo de zero.
+- Tempo de rollback e recuperação mensurável e reduzido.
+
+---
+
+## Backlog priorizado
 
 ### P0 (imediato)
-- Testes de fluxo dos caminhos críticos de captura.
-- Padronização de feedback visual (toast/notificação).
-- Validação/sanitização de entrada do usuário.
+- Testes de fluxo ponta a ponta dos cenários críticos.
+- Padronização de validações e mensagens de erro.
+- Checklist de regressão no processo de PR.
 
 ### P1 (curto prazo)
-- `useReducer` no estado central.
-- Separação da lógica de domínio em hooks.
-- Persistência ampliada no `localStorage`.
+- Refatoração do estado central e separação da lógica de domínio.
+- Camada de API com contratos explícitos e fallback.
+- Melhoria de loading/error states na interface.
 
 ### P2 (médio prazo)
-- Adaptador de API com fallback para mocks.
-- Acessibilidade avançada e refinamento de UX.
-- Instrumentação básica (eventos de captura/rejeição/erro).
+- Acessibilidade avançada.
+- Observabilidade e eventos de produto.
+- Hardening de segurança e runbook operacional.
 
-## Indicadores de sucesso
-- **Qualidade:** cobertura de testes dos fluxos críticos >= 70%.
-- **Confiabilidade:** zero regressões em captura/rejeição em 2 releases consecutivos.
-- **Manutenibilidade:** redução do tamanho/responsabilidade de `App.jsx` (meta: apenas composição e roteamento interno).
-- **Produto:** tempo médio para concluir captura manual reduzido em 20%.
+## Plano de execução por sprint
+- **Sprint 1:** testes críticos + validações + checklist de PR.
+- **Sprint 2:** refatoração de estado + extração para hooks/serviços.
+- **Sprint 3:** contratos de API + fallback mock + UX de erro/loading.
+- **Sprint 4:** acessibilidade + observabilidade + hardening + documentação.
 
-## Estratégia de execução
-- Trabalhar em PRs pequenos por fase (1 objetivo por PR quando possível).
-- Cada PR deve incluir:
-  - mudança funcional;
-  - testes relacionados;
-  - breve nota de impacto no README/changelog.
-- Revisão com checklist fixo: regressão de fluxo, acessibilidade mínima e persistência.
+## Riscos e mitigação
+- **Risco:** escopo de refatoração crescer demais.
+  - **Mitigação:** limitar PRs a uma responsabilidade por vez.
+- **Risco:** mudanças de backend quebrarem frontend.
+  - **Mitigação:** contrato versionado e testes de integração por endpoint.
+- **Risco:** baixa adesão a padrões de qualidade.
+  - **Mitigação:** gates automáticos no CI e checklist obrigatório.
 
-## Primeiro pacote recomendado (próxima sprint)
-1. Escrever testes para `SwipeTab` e `ShiftModal`.
-2. Padronizar estrutura de `toast/notif`.
-3. Implementar validação simples de onboarding/chat.
-4. Atualizar documentação de contribuição com checklist de testes de fluxo.
+## Resultado esperado ao final do ciclo
+- Plataforma com menor taxa de regressão.
+- Código mais simples de manter e evoluir.
+- Integração backend mais previsível.
+- Melhor experiência para usuários e maior confiança para releases frequentes.
