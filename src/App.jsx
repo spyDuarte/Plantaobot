@@ -44,6 +44,7 @@ import {
   saveGroups,
   clearHistory,
 } from "./services/monitoringApi.js";
+import { trackGrowthEvent } from "./services/growthApi.js";
 
 const DEFAULT_PREFS = {
   minVal: 1500,
@@ -55,6 +56,10 @@ const DEFAULT_PREFS = {
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const POLL_MS = Number(import.meta.env.VITE_MONITOR_POLL_MS || 10000);
+const GROWTH_METRICS_DEFAULT = {
+  share_clicked: 0,
+  invite_accepted: 0,
+};
 
 function normalizePrefs(input) {
   if (!input || typeof input !== "object") {
@@ -135,6 +140,59 @@ function appendUniqueById(list, item) {
   return [...list, item];
 }
 
+function toSlug(input) {
+  return String(input || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "")
+    .slice(0, 10);
+}
+
+function createReferralCode(name) {
+  const seed = toSlug(name) || "medico";
+  const randomSuffix = Math.random().toString(36).slice(2, 7);
+  return `${seed}-${randomSuffix}`;
+}
+
+function buildInviteUrl(referralCode, name) {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("ref", referralCode);
+  url.searchParams.set("utm_source", "captured_share");
+  if (name) {
+    url.searchParams.set("ref_name", String(name).trim().slice(0, 40));
+  }
+  return url.toString();
+}
+
+async function copyTextToClipboard(text) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
+}
+
 export default function App() {
   const [screen, setScreen] = useLocalStorage("pb_screen", "onboard");
   const [obStep, setObStep] = useState(0);
@@ -156,6 +214,9 @@ export default function App() {
   const [feedError, setFeedError] = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [prefs, setPrefs] = useLocalStorage("pb_prefs", DEFAULT_PREFS);
+  const [growthMetrics, setGrowthMetrics] = useLocalStorage("pb_growth_metrics", GROWTH_METRICS_DEFAULT);
+  const [referralCode, setReferralCode] = useLocalStorage("pb_referral_code", "");
+  const [lastShareAt, setLastShareAt] = useLocalStorage("pb_last_share_at", "");
 
   const flags = getFeatureFlags();
   const uiV2 = flags.ui_v2;
@@ -200,6 +261,23 @@ export default function App() {
 
     setNotifs((previous) => [...previous, notification]);
   }, []);
+
+  const trackGrowth = useCallback(async (eventName, payload = {}) => {
+    if (!eventName) {
+      return;
+    }
+
+    setGrowthMetrics((previous) => ({
+      ...previous,
+      [eventName]: Number(previous?.[eventName] ?? 0) + 1,
+    }));
+
+    try {
+      await trackGrowthEvent(eventName, payload);
+    } catch {
+      // Growth telemetry should not break operational flows.
+    }
+  }, [setGrowthMetrics]);
 
   const stopPolling = useCallback(() => {
     if (pollTimerRef.current) {
@@ -438,6 +516,53 @@ export default function App() {
   }, [feed]);
 
   useEffect(() => {
+    if (referralCode) {
+      return;
+    }
+
+    setReferralCode(createReferralCode(name));
+  }, [name, referralCode, setReferralCode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const sourceCode = params.get("ref");
+    if (!sourceCode || sourceCode === referralCode) {
+      return;
+    }
+
+    const dedupeKey = `pb_invite_seen_${sourceCode}`;
+    try {
+      if (window.localStorage.getItem(dedupeKey)) {
+        return;
+      }
+      window.localStorage.setItem(dedupeKey, "1");
+    } catch {
+      // If storage is unavailable, continue and keep non-blocking behavior.
+    }
+
+    void trackGrowth("invite_accepted", {
+      ref: sourceCode,
+      source: params.get("utm_source") || "direct",
+    });
+
+    const inviterName = params.get("ref_name");
+    if (inviterName) {
+      toast("Convite detectado", `Voce chegou por um convite de ${inviterName}.`, "info", "growth");
+    }
+
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("ref");
+    cleanUrl.searchParams.delete("ref_name");
+    cleanUrl.searchParams.delete("utm_source");
+    const nextPath = `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`;
+    window.history.replaceState({}, "", nextPath);
+  }, [referralCode, toast, trackGrowth]);
+
+  useEffect(() => {
     setMonthly(buildMonthlySeries(captured));
   }, [captured]);
 
@@ -575,6 +700,50 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  async function shareCapturedSummary() {
+    if (captured.length === 0) {
+      toast("Sem capturas", "Capture pelo menos um plantao para compartilhar seu resultado.", "warning", "growth");
+      return;
+    }
+
+    const activeCode = referralCode || createReferralCode(name);
+    if (!referralCode) {
+      setReferralCode(activeCode);
+    }
+
+    const inviteUrl = buildInviteUrl(activeCode, name);
+    const avgTicket = Math.round(total / Math.max(captured.length, 1));
+    const introName = name ? `${name} ` : "Eu ";
+    const message = `${introName}capturei ${captured.length} plantoes (R$ ${fmt(total)}) com ticket medio de R$ ${fmt(avgTicket)} usando o PlantaoBot.`;
+    const fullText = `${message}\nTeste aqui: ${inviteUrl}`;
+
+    void trackGrowth("share_clicked", {
+      channel: "whatsapp",
+      capturedCount: captured.length,
+      totalValue: total,
+      ref: activeCode,
+    });
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(fullText)}`;
+    const popup = typeof window !== "undefined" ? window.open(whatsappUrl, "_blank", "noopener,noreferrer") : null;
+
+    if (popup) {
+      setLastShareAt(new Date().toISOString());
+      toast("Compartilhamento pronto", "Mensagem aberta no WhatsApp para voce enviar.", "success", "growth");
+      return;
+    }
+
+    try {
+      const copied = await copyTextToClipboard(fullText);
+      if (!copied) {
+        throw new Error("copy_failed");
+      }
+      setLastShareAt(new Date().toISOString());
+      toast("Link copiado", "Mensagem pronta para colar no WhatsApp.", "success", "growth");
+    } catch {
+      toast("Falha ao compartilhar", "Nao foi possivel abrir o WhatsApp nem copiar a mensagem.", "warning", "growth");
+    }
+  }
   async function acceptFromModal(shift) {
     if (captured.some((item) => item.id === shift.id)) {
       return;
@@ -616,6 +785,23 @@ export default function App() {
   const capturedVm = useMemo(() => normalizeShiftCollection(captured), [captured]);
   const rejectedVm = useMemo(() => normalizeShiftCollection(rejected), [rejected]);
   const pendingVm = useMemo(() => normalizeShiftCollection(pending), [pending]);
+  const shareClickedCount = Number(growthMetrics?.share_clicked ?? 0);
+  const inviteAcceptedCount = Number(growthMetrics?.invite_accepted ?? 0);
+  const lastShareLabel = useMemo(() => {
+    if (!lastShareAt) {
+      return "";
+    }
+
+    const parsed = new Date(lastShareAt);
+    if (Number.isNaN(parsed.getTime())) {
+      return "";
+    }
+
+    return parsed.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [lastShareAt]);
 
   const tabs = useMemo(
     () => [
@@ -684,6 +870,10 @@ export default function App() {
         rejected={rejected}
         total={total}
         exportCSV={exportCSV}
+        onShareCaptured={shareCapturedSummary}
+        shareClicked={shareClickedCount}
+        inviteAccepted={inviteAcceptedCount}
+        lastShareLabel={lastShareLabel}
         setModal={setModal}
       />
     ),

@@ -2,7 +2,7 @@ import { C } from "../../constants/colors.js";
 import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, EmptyState, PageHeader, Pill, ScBar } from "../ui/index.jsx";
 
-export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV, setModal }) {
+export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV, onShareCaptured, shareClicked = 0, inviteAccepted = 0, lastShareLabel = "", setModal }) {
   return (
     <div style={{ animation: "fadeUp .25s both" }}>
       {uiV2 ? (
@@ -10,9 +10,14 @@ export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV
           title="Plantoes capturados"
           subtitle="Historico consolidado com score e exportacao"
           action={
-            <Button type="button" variant="secondary" onClick={exportCSV} disabled={captured.length === 0}>
-              Exportar CSV
-            </Button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button type="button" onClick={onShareCaptured} disabled={captured.length === 0}>
+                Compartilhar resultado
+              </Button>
+              <Button type="button" variant="secondary" onClick={exportCSV} disabled={captured.length === 0}>
+                Exportar CSV
+              </Button>
+            </div>
           }
         />
       ) : null}
@@ -33,6 +38,30 @@ export default function CapturedTab({ uiV2, captured, rejected, total, exportCSV
               </div>
               <Badge tone="success">{captured.length} capturados</Badge>
             </div>
+          </Card>
+
+          <Card muted style={{ marginBottom: 10, borderColor: "rgba(34, 120, 166, 0.24)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ fontSize: 12, color: C.text1 }}>
+                Compartilhamentos: <strong>{shareClicked}</strong>
+              </div>
+              <Badge tone="info">{inviteAccepted} convites abertos</Badge>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11, color: C.text2 }}>
+              {lastShareLabel
+                ? `Ultimo compartilhamento preparado as ${lastShareLabel}.`
+                : "Compartilhe seu total para convidar colegas da sua rede."}
+            </div>
+            {!uiV2 ? (
+              <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button type="button" onClick={onShareCaptured}>
+                  Compartilhar resultado
+                </Button>
+                <Button type="button" variant="secondary" onClick={exportCSV}>
+                  Exportar CSV
+                </Button>
+              </div>
+            ) : null}
           </Card>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
