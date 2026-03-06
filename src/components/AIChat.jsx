@@ -2,10 +2,17 @@ import { useState, useRef, useEffect } from "react";
 import { C } from "../constants/colors.js";
 import { fmt } from "../utils/index.js";
 import { Badge, Button, Card, Input } from "./ui/index.jsx";
+import { apiRequest } from "../services/apiClient.js";
 
+const PROMPT_MIN = 3;
+const PROMPT_MAX = 500;
 
 function sanitizePrompt(value) {
-  return value.replace(/\s+/g, " ").trim().slice(0, 500);
+  return String(value)
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, PROMPT_MAX);
 }
 
 export default function AIChat({ prefs, name, captured, rejected, showHeader = true }) {
@@ -36,7 +43,7 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
 
   async function send(value) {
     const prompt = sanitizePrompt(value || input);
-    if (!prompt || loading) {
+    if (prompt.length < PROMPT_MIN || loading) {
       return;
     }
 
@@ -52,37 +59,22 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
       `Descartados: ${rejected.length}. ` +
       "Responda em portugues do Brasil, direto, com no maximo 3 paragrafos e foco pratico.";
 
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      setMessages((previous) => [
-        ...previous,
-        { role: "assistant", content: "Chave de API nao configurada. Defina VITE_ANTHROPIC_API_KEY." },
-      ]);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const data = await apiRequest("/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
+        body: {
           system,
           messages: history.map((message) => ({ role: message.role, content: message.content })),
-        }),
+        },
       });
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || "Nao consegui responder no momento.";
+      const reply = data?.reply || "Nao consegui responder no momento.";
       setMessages((previous) => [...previous, { role: "assistant", content: reply }]);
-    } catch {
-      setMessages((previous) => [...previous, { role: "assistant", content: "Erro ao conectar com a IA. Tente novamente." }]);
+    } catch (error) {
+      const msg =
+        error?.status === 503
+          ? "Servico de IA nao configurado no servidor."
+          : "Erro ao conectar com a IA. Tente novamente.";
+      setMessages((previous) => [...previous, { role: "assistant", content: msg }]);
     }
 
     setLoading(false);
@@ -142,8 +134,8 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
       <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
         <Input
           value={input}
-          onChange={(event) => setInput(event.target.value.slice(0, 500))}
-          maxLength={500}
+          onChange={(event) => setInput(sanitizePrompt(event.target.value))}
+          maxLength={PROMPT_MAX}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               send();
@@ -151,8 +143,9 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
           }}
           placeholder="Pergunte sobre oportunidades e estrategia..."
           disabled={loading}
+          aria-label="Mensagem para o assistente"
         />
-        <Button type="button" onClick={() => send()} disabled={loading || !sanitizePrompt(input)}>
+        <Button type="button" onClick={() => send()} disabled={loading || sanitizePrompt(input).length < PROMPT_MIN}>
           Enviar
         </Button>
       </div>

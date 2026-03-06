@@ -1,7 +1,7 @@
 import { C } from "../../constants/colors.js";
 import { Av, Badge, Button, Card, EmptyState, PageHeader, Pill, ScBar } from "../ui/index.jsx";
 
-export default function FeedTab({ uiV2, botOn, feed, typing, setModal, feedRef }) {
+export default function FeedTab({ uiV2, botOn, feed, typing, setModal, feedRef, setTab }) {
   return (
     <div style={{ animation: "fadeUp .25s both" }}>
       {uiV2 ? (
@@ -24,11 +24,26 @@ export default function FeedTab({ uiV2, botOn, feed, typing, setModal, feedRef }
       <div ref={feedRef} style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 620, overflowY: "auto" }}>
         {feed.length === 0 ? (
           <Card>
-            <EmptyState
-              icon="F"
-              title="Nenhuma mensagem ainda"
-              description={botOn ? "Monitoramento ativo. Novas mensagens aparecerao em instantes." : "Inicie o bot para popular o feed."}
-            />
+            {!botOn ? (
+              <EmptyState
+                icon="F"
+                title="Bot inativo"
+                description="Inicie o monitoramento para receber mensagens dos grupos."
+              />
+            ) : (
+              <EmptyState
+                icon="F"
+                title="Aguardando mensagens"
+                description="Monitoramento ativo. Configure a integração WhatsApp para receber ofertas de plantão em tempo real."
+                action={
+                  setTab ? (
+                    <Button type="button" variant="secondary" onClick={() => setTab("settings")}>
+                      Configurar WhatsApp
+                    </Button>
+                  ) : null
+                }
+              />
+            )}
           </Card>
         ) : (
           feed.map((message) => {

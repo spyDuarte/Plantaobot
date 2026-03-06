@@ -1,15 +1,30 @@
+import { useState } from "react";
 import { C, reducedMotion } from "../constants/colors.js";
 import { DAYS, SPECS } from "../data/mockData.js";
 import { fmt } from "../utils/index.js";
 import { BgOrbs } from "./ui/index.jsx";
 import { S, CSS } from "../styles/index.js";
 
+const NAME_MIN = 2;
+const NAME_MAX = 60;
+
+function sanitizeName(value) {
+  return String(value)
+    .replace(/[<>"'`]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart()
+    .slice(0, NAME_MAX);
+}
+
 export default function Onboarding({obStep,setObStep,name,setName,prefs,setPrefs,projM,onDone}) {
+  const [nameError, setNameError] = useState("");
+
   const ob=[
     {icon:"🤖",title:"PlantãoBot v5",sub:"Automação de plantões com IA integrada",
      body:<div>
        <label style={S.lbl}>Seu nome</label>
-       <input value={name} onChange={e=>setName(e.target.value.slice(0,60))} maxLength={60} placeholder="Dr(a). Seu Nome" style={S.inp} autoFocus/>
+       <input value={name} onChange={e=>{const v=sanitizeName(e.target.value);setName(v);if(v.trim().length>=NAME_MIN)setNameError("");}} maxLength={NAME_MAX} placeholder="Dr(a). Seu Nome" style={{...S.inp,borderColor:nameError?"#f87171":undefined}} autoFocus aria-describedby={nameError?"ob-name-err":undefined}/>
+       {nameError&&<div id="ob-name-err" role="alert" style={{marginTop:5,fontSize:11,color:"#f87171"}}>{nameError}</div>}
        <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:18}}>
          {[["🔍","Monitoramento 24/7","Lê WhatsApp enquanto você trabalha ou dorme"],["⚡","0.8s de resposta","Impossível para humanos, fácil para o bot"],["🤖","IA integrada","Assistente Claude analisa e aconselha em tempo real"]].map(([i,t,d])=>(
            <div key={t} style={{display:"flex",gap:12,padding:"12px 14px",background:C.emB,border:"1px solid "+C.em+"18",borderRadius:12}}>
@@ -87,7 +102,7 @@ export default function Onboarding({obStep,setObStep,name,setName,prefs,setPrefs
         <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:30}}>
           {ob.map((_,i)=><div key={i} style={{width:i===obStep?24:8,height:8,borderRadius:4,background:i<=obStep?C.em:C.bd,transition:"all .3s cubic-bezier(.4,0,.2,1)",boxShadow:i===obStep?"0 0 12px "+C.emG:""}}/>)}
         </div>
-        <form onSubmit={e=>{e.preventDefault();obStep<ob.length-1?setObStep(p=>p+1):onDone();}} style={{background:"rgba(7,14,29,0.88)",backdropFilter:"blur(28px)",border:"1px solid "+C.bd,borderRadius:24,padding:28,boxShadow:"0 30px 80px rgba(0,0,0,.8)",position:"relative",overflow:"hidden"}}>
+        <form onSubmit={e=>{e.preventDefault();if(obStep===0&&name.trim().length<NAME_MIN){setNameError(`Informe seu nome (mínimo ${NAME_MIN} caracteres).`);return;}setNameError("");obStep<ob.length-1?setObStep(p=>p+1):onDone();}} style={{background:"rgba(7,14,29,0.88)",backdropFilter:"blur(28px)",border:"1px solid "+C.bd,borderRadius:24,padding:28,boxShadow:"0 30px 80px rgba(0,0,0,.8)",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,"+C.em+"66,transparent)"}}/>
           <div style={{fontSize:42,marginBottom:12,lineHeight:1}} aria-hidden="true">{ob[obStep].icon}</div>
           <div style={{fontSize:23,fontWeight:800,color:C.tx0,letterSpacing:"-.6px",marginBottom:5}}>{ob[obStep].title}</div>
