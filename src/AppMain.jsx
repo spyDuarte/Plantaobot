@@ -924,6 +924,7 @@ export default function AppMain({ onLogout = null }) {
         typing={typing}
         setModal={setModal}
         feedRef={feedRef}
+        setTab={setTab}
       />
     ),
     swipe: (
