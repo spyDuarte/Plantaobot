@@ -22,6 +22,9 @@ import {
   validateSignupForm,
 } from './utils/authValidation.js';
 
+// Set to true when Supabase is configured and auth should be enforced.
+const AUTH_ENABLED = false;
+
 const STATUS = {
   LOADING: 'loading',
   PROCESSING_CALLBACK: 'processing_callback',
@@ -186,7 +189,7 @@ function AuthLayout({ title, subtitle, children }) {
 }
 
 export default function App() {
-  const [status, setStatus] = useState(STATUS.LOADING);
+  const [status, setStatus] = useState(AUTH_ENABLED ? STATUS.LOADING : STATUS.AUTHENTICATED);
   const [authMode, setAuthMode] = useState(MODE.LOGIN);
   const [busy, setBusy] = useState(false);
   const [bootstrapBusy, setBootstrapBusy] = useState(false);
@@ -280,6 +283,8 @@ export default function App() {
     }
 
     const bootstrap = async () => {
+      if (!AUTH_ENABLED) return;
+
       const callback = parseAuthCallback();
 
       if (callback) {
