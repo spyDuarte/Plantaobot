@@ -25,6 +25,48 @@ function toQrCode(value) {
   return `data:image/png;base64,${qr}`;
 }
 
+function extractChatItems(payload) {
+  if (!payload) {
+    return [];
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  const candidates = [
+    payload.chats,
+    payload.groups,
+    payload.data,
+    payload.result,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  return [];
+}
+
+function toGroupShape(chat) {
+  const id = String(chat?.id || chat?.jid || chat?.remoteJid || '').trim();
+  if (!id || !id.endsWith('@g.us')) {
+    return null;
+  }
+
+  const membersRaw = chat?.participantsCount ?? chat?.participants?.length ?? chat?.members ?? 0;
+
+  return {
+    id,
+    name: String(chat?.name || chat?.subject || chat?.pushName || 'Grupo sem nome').slice(0, 120),
+    members: Number(membersRaw || 0),
+    emoji: '🏥',
+    active: true,
+  };
+}
+
 function mapEvolutionError(error) {
   if (error?.name === 'AbortError') {
     return createHttpError(504, 'EVOLUTION_TIMEOUT', 'A Evolution API demorou para responder. Tente novamente em instantes.');
@@ -143,6 +185,38 @@ export function createWhatsappProvider(config = {}) {
         qrCode: toQrCode(rawQr),
         state,
       };
+    },
+
+    async listInstanceGroups({ instanceId }) {
+      const attempts = [
+        `/chat/findChats/${instanceId}`,
+        `/group/fetchAllGroups/${instanceId}`,
+      ];
+
+      let chats = [];
+      let lastError = null;
+
+      for (const path of attempts) {
+        try {
+          const payload = await requestEvolution(path, { method: 'GET' });
+          chats = extractChatItems(payload);
+          if (chats.length > 0) {
+            break;
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (chats.length === 0 && lastError) {
+        throw lastError;
+      }
+
+      const groups = chats
+        .map(toGroupShape)
+        .filter(Boolean);
+
+      return groups;
     },
   };
 }

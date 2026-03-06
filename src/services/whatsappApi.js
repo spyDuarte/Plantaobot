@@ -34,6 +34,14 @@ export async function connectWhatsapp() {
 }
 
 /**
+ * Syncs and fetches WhatsApp groups from the connected instance.
+ * @returns {Promise<{ groups: Array<{ id: string, name: string, members: number, emoji: string, active: boolean }> }>}
+ */
+export async function fetchWhatsappGroups() {
+  return apiRequest('/whatsapp/groups');
+}
+
+/**
  * Builds the full webhook URL for a given user ID and token.
  * Resolves against the API base URL when it is an absolute URL,
  * or falls back to the current page origin for relative paths.

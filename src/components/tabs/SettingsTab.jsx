@@ -5,7 +5,7 @@ import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, PageHeader, Toggle } from "../ui/index.jsx";
 import { S } from "../../styles/index.js";
 import { ApiError } from "../../services/apiClient.js";
-import { fetchWhatsappConfig, fetchWhatsappStatus, resetWhatsappToken, buildWebhookUrl, connectWhatsapp } from "../../services/whatsappApi.js";
+import { fetchWhatsappConfig, fetchWhatsappStatus, resetWhatsappToken, buildWebhookUrl, connectWhatsapp, fetchWhatsappGroups } from "../../services/whatsappApi.js";
 
 export default function SettingsTab({
   uiV2,
@@ -25,7 +25,9 @@ export default function SettingsTab({
   const [waCopied, setWaCopied] = useState(false);
   const [waResetting, setWaResetting] = useState(false);
   const [waConnecting, setWaConnecting] = useState(false);
+  const [waSyncingGroups, setWaSyncingGroups] = useState(false);
   const [waConnectError, setWaConnectError] = useState("");
+  const [waSyncGroupsError, setWaSyncGroupsError] = useState("");
   const [waQrCode, setWaQrCode] = useState("");
 
   function getFriendlyConnectError(error) {
@@ -155,6 +157,22 @@ export default function SettingsTab({
     }
   }
 
+  async function handleSyncWhatsappGroups() {
+    setWaSyncingGroups(true);
+    setWaSyncGroupsError("");
+
+    try {
+      const result = await fetchWhatsappGroups();
+      if (Array.isArray(result?.groups)) {
+        setGroups(result.groups);
+      }
+    } catch (error) {
+      setWaSyncGroupsError(error?.message || "Não foi possível sincronizar os grupos do WhatsApp.");
+    } finally {
+      setWaSyncingGroups(false);
+    }
+  }
+
   const webhookUrl = waConfig ? buildWebhookUrl(waConfig.userId, waConfig.webhookToken) : "";
 
   return (
@@ -270,6 +288,9 @@ export default function SettingsTab({
                 <Button type="button" variant="secondary" onClick={handleConnectWhatsapp} disabled={waConnecting}>
                   {waConnecting ? "Conectando..." : "Conectar WhatsApp"}
                 </Button>
+                <Button type="button" variant="secondary" onClick={handleSyncWhatsappGroups} disabled={waSyncingGroups}>
+                  {waSyncingGroups ? "Sincronizando..." : "Sincronizar grupos do WhatsApp"}
+                </Button>
               </div>
             </div>
 
@@ -285,6 +306,21 @@ export default function SettingsTab({
                 }}
               >
                 {waConnectError}
+              </div>
+            ) : null}
+
+            {waSyncGroupsError ? (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 11,
+                  color: "#991b1b",
+                }}
+              >
+                {waSyncGroupsError}
               </div>
             ) : null}
 
@@ -503,4 +539,3 @@ export default function SettingsTab({
     </div>
   );
 }
-

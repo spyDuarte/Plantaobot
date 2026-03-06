@@ -650,6 +650,24 @@ export function createApp(options = {}) {
     });
   }));
 
+  app.get('/api/whatsapp/groups', requireAuth({}, deps), asyncRoute(async (req, res) => {
+    if (!whatsappProvider) {
+      throw createHttpError(503, 'EVOLUTION_NOT_CONFIGURED', 'Integração Evolution API não configurada no servidor.');
+    }
+
+    const userId = req.auth.user.id;
+    const waConfig = await dataStore.getWhatsappConfig(userId);
+
+    if (!waConfig.instanceId) {
+      throw createHttpError(409, 'WHATSAPP_INSTANCE_NOT_FOUND', 'Conecte seu WhatsApp antes de sincronizar os grupos.');
+    }
+
+    const groups = await whatsappProvider.listInstanceGroups({ instanceId: waConfig.instanceId });
+    const merged = await dataStore.mergeGroups(userId, groups);
+
+    res.json({ groups: merged });
+  }));
+
   app.post('/api/chat', requireAuth({}, deps), asyncRoute(async (req, res) => {
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
