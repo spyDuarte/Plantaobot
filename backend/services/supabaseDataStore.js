@@ -30,6 +30,20 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function toCanonicalGroupId(group, fallbackId) {
+  const jid = String(group?.jid || '').trim().toLowerCase();
+  if (jid && jid.endsWith('@g.us')) {
+    return jid;
+  }
+
+  const id = String(group?.id || '').trim().toLowerCase();
+  if (id && id.endsWith('@g.us')) {
+    return id;
+  }
+
+  return String(group?.id || fallbackId || '').trim();
+}
+
 function normalizeOffer(offer, fallbackId) {
   const id = String(offer?.id || fallbackId || crypto.randomUUID());
   return {
@@ -597,7 +611,7 @@ export function createSupabaseDataStore(config) {
 
       const rows = groups.map((group, index) => ({
         user_id: userId,
-        group_id: String(group.id || index + 1),
+        group_id: toCanonicalGroupId(group, index + 1),
         name: String(group.name || `Grupo ${index + 1}`).slice(0, 120),
         members: Number(group.members || 0),
         active: Boolean(group.active),
@@ -616,7 +630,7 @@ export function createSupabaseDataStore(config) {
       }
 
       const normalizedGroups = groups.map((group, index) => ({
-        id: String(group.id || index + 1),
+        id: toCanonicalGroupId(group, index + 1),
         name: String(group.name || `Grupo ${index + 1}`).slice(0, 120),
         members: Number(group.members || 0),
         emoji: String(group.emoji || '🏥').slice(0, 24),
@@ -650,6 +664,34 @@ export function createSupabaseDataStore(config) {
       assertNoError(upsertError, 'Failed to merge groups.');
 
       return this.getGroups(userId);
+    },
+
+    async isActiveGroupByJidOrName(userId, { jid, groupName } = {}) {
+      const normalizedJid = String(jid || '').trim().toLowerCase();
+      const normalizedGroupName = String(groupName || '').trim().toLowerCase();
+
+      if (!normalizedJid && !normalizedGroupName) {
+        return false;
+      }
+
+      let query = client
+        .from('groups')
+        .select('group_id, name, active')
+        .eq('user_id', userId)
+        .limit(50);
+
+      if (normalizedJid && normalizedGroupName) {
+        query = query.or(`group_id.eq.${normalizedJid},name.ilike.${normalizedGroupName}`);
+      } else if (normalizedJid) {
+        query = query.eq('group_id', normalizedJid);
+      } else {
+        query = query.ilike('name', normalizedGroupName);
+      }
+
+      const { data, error } = await query;
+      assertNoError(error, 'Failed to validate active group by jid or name.');
+
+      return (data || []).some((group) => Boolean(group.active));
     },
 
     async clearHistory(userId) {
