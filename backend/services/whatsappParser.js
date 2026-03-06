@@ -335,3 +335,63 @@ export function normalizeWhatsappCloudMessage(payload) {
 export function normalizeIncomingWebhook(payload) {
   return normalizeEvolutionApiMessage(payload) || normalizeWhatsappCloudMessage(payload);
 }
+
+function mapConnectionState(stateValue) {
+  const state = String(stateValue || '').toLowerCase();
+  if (!state) {
+    return null;
+  }
+
+  if (['open', 'opened', 'connected', 'online'].includes(state)) {
+    return true;
+  }
+
+  if (['close', 'closed', 'disconnected', 'disconnect', 'offline'].includes(state)) {
+    return false;
+  }
+
+  return null;
+}
+
+/**
+ * Tries to normalize connection status events from supported webhook providers.
+ * @param {object} payload
+ * @returns {{ connected: boolean, instanceId: string | null, phoneNumber: string | null } | null}
+ */
+export function normalizeIncomingWebhookStatus(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const event = String(payload.event || '').toLowerCase();
+  const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  const evolutionState = mapConnectionState(data.state || data.connection || data.status);
+
+  if (event.includes('connection') || event.includes('status.instance') || event.includes('instance.status')) {
+    if (evolutionState === null) {
+      return null;
+    }
+
+    return {
+      connected: evolutionState,
+      instanceId: payload.instance ? String(payload.instance) : (data.instance ? String(data.instance) : null),
+      phoneNumber: data.number ? String(data.number) : (data.phone ? String(data.phone) : null),
+    };
+  }
+
+  const cloudStatus = payload?.entry?.[0]?.changes?.[0]?.value?.statuses?.[0];
+  if (cloudStatus) {
+    const connected = mapConnectionState(cloudStatus.status);
+    if (connected === null) {
+      return null;
+    }
+
+    return {
+      connected,
+      instanceId: cloudStatus?.recipient_id ? String(cloudStatus.recipient_id) : null,
+      phoneNumber: cloudStatus?.recipient_id ? String(cloudStatus.recipient_id) : null,
+    };
+  }
+
+  return null;
+}

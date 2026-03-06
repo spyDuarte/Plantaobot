@@ -28,6 +28,7 @@ import { createWhatsappProvider } from './services/whatsappProvider.js';
 import {
   isShiftOffer,
   normalizeIncomingWebhook,
+  normalizeIncomingWebhookStatus,
   parseShiftOffer,
 } from './services/whatsappParser.js';
 
@@ -315,9 +316,15 @@ export function createApp(options = {}) {
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token inválido.' });
     }
 
+    const statusChange = normalizeIncomingWebhookStatus(req.body);
+    if (statusChange) {
+      await dataStore.saveWhatsappStatusTransition(userId, statusChange);
+      return res.json({ ok: true, processed: true, type: 'status' });
+    }
+
     const normalized = normalizeIncomingWebhook(req.body);
     if (!normalized) {
-      // Acknowledge unrecognized or non-text payloads silently
+      // Acknowledge unrecognized payloads silently
       return res.json({ ok: true, processed: false });
     }
 
@@ -602,6 +609,11 @@ export function createApp(options = {}) {
     const waConfig = await dataStore.getWhatsappConfig(req.auth.user.id);
     const messageCount = await dataStore.getWhatsappMessageCount(req.auth.user.id);
     res.json({ ...waConfig, messageCount });
+  }));
+
+  app.get('/api/whatsapp/status', requireAuth({}, deps), asyncRoute(async (req, res) => {
+    const status = await dataStore.getWhatsappStatus(req.auth.user.id);
+    res.json(status);
   }));
 
   // POST /api/whatsapp/config/reset-token — rotates the webhook secret token

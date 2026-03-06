@@ -245,10 +245,25 @@ export function createMockDataStore() {
       return whatsappConfig.get(userId);
     },
 
+    async getWhatsappStatus(userId) {
+      const current = await this.getWhatsappConfig(userId);
+      return {
+        connected: Boolean(current.connected),
+        connectedAt: current.connectedAt || null,
+        instanceId: current.instanceId || null,
+        phoneNumber: current.phoneNumber || null,
+      };
+    },
+
     async getWhatsappMessageCount() {
       return 0;
     },
 
+
+    async validateWebhookToken(userId, token) {
+      const current = await this.getWhatsappConfig(userId);
+      return current.webhookToken === token;
+    },
     async resetWebhookToken(userId) {
       const current = await this.getWhatsappConfig(userId);
       const webhookToken = `token-${Date.now()}`;
@@ -263,6 +278,18 @@ export function createMockDataStore() {
         ...current,
         instanceId: instanceId || null,
         connected: Boolean(connected),
+        connectedAt: connected ? new Date().toISOString() : null,
+      });
+    },
+
+    async saveWhatsappStatusTransition(userId, { connected, instanceId = null, phoneNumber = null }) {
+      const current = await this.getWhatsappConfig(userId);
+      whatsappConfig.set(userId, {
+        ...current,
+        connected: Boolean(connected),
+        connectedAt: connected ? new Date().toISOString() : null,
+        instanceId: instanceId || current.instanceId || null,
+        phoneNumber: phoneNumber || current.phoneNumber || null,
       });
     },
 

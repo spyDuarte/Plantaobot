@@ -5,7 +5,7 @@ import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, PageHeader, Toggle } from "../ui/index.jsx";
 import { S } from "../../styles/index.js";
 import { ApiError } from "../../services/apiClient.js";
-import { fetchWhatsappConfig, resetWhatsappToken, buildWebhookUrl, connectWhatsapp } from "../../services/whatsappApi.js";
+import { fetchWhatsappConfig, fetchWhatsappStatus, resetWhatsappToken, buildWebhookUrl, connectWhatsapp } from "../../services/whatsappApi.js";
 
 export default function SettingsTab({
   uiV2,
@@ -60,9 +60,45 @@ export default function SettingsTab({
     }
   }, []);
 
+  const refreshWaStatus = useCallback(async () => {
+    try {
+      const status = await fetchWhatsappStatus();
+      setWaConfig((previous) => {
+        if (!previous) {
+          return previous;
+        }
+
+        return {
+          ...previous,
+          connected: Boolean(status.connected),
+          connectedAt: status.connectedAt || null,
+          instanceId: status.instanceId || previous.instanceId || null,
+          phoneNumber: status.phoneNumber || previous.phoneNumber || null,
+        };
+      });
+    } catch {
+      // ignore polling errors to avoid UI flicker
+    }
+  }, []);
+
   useEffect(() => {
     loadWaConfig();
   }, [loadWaConfig]);
+
+  useEffect(() => {
+    if (!waConfig) {
+      return undefined;
+    }
+
+    refreshWaStatus();
+    const intervalId = setInterval(() => {
+      refreshWaStatus();
+    }, 6000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [waConfig?.userId, refreshWaStatus]);
 
   async function handleCopyWebhook() {
     if (!waConfig) return;
@@ -188,10 +224,22 @@ export default function SettingsTab({
               <span style={{ fontSize: 12, fontWeight: 700, color: waConfig.connected ? C.success : C.text2 }}>
                 {waConfig.connected ? "Conectado" : "Não conectado"}
               </span>
+              {waConfig.connectedAt ? (
+                <span style={{ fontSize: 11, color: C.text2 }}>
+                  desde {new Date(waConfig.connectedAt).toLocaleString("pt-BR")}
+                </span>
+              ) : null}
               {waConfig.messageCount > 0 && (
                 <Badge tone="info">{waConfig.messageCount} mensagens recebidas</Badge>
               )}
             </div>
+
+            {(waConfig.instanceId || waConfig.phoneNumber) ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, fontSize: 11, color: C.text2 }}>
+                {waConfig.instanceId ? <span>Instância: {waConfig.instanceId}</span> : null}
+                {waConfig.phoneNumber ? <span>Número: {waConfig.phoneNumber}</span> : null}
+              </div>
+            ) : null}
 
             <div>
               <div style={{ fontSize: 11, color: C.text2, marginBottom: 4 }}>
