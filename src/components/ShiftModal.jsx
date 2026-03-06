@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { C, reducedMotion } from "../constants/colors.js";
 import { fmt, calcScore } from "../utils/index.js";
 import { Button, Card, Pill, RivalRace, ScBar } from "./ui/index.jsx";
@@ -19,6 +19,8 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [shift, onClose]);
 
+  const [accepting, setAccepting] = useState(false);
+
   if (!shift) {
     return null;
   }
@@ -27,6 +29,18 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
   const score = result.s;
   const scoreColor = score >= 80 ? C.success : score >= 50 ? C.warning : C.error;
   const alreadyCaptured = captured.some((item) => item.id === shift.id);
+
+  async function handleAccept() {
+    if (!onAccept || accepting) return;
+    setAccepting(true);
+    try {
+      await onAccept(shift);
+      onClose();
+    } catch {
+      // Error toast is shown by the parent; keep modal open so user can retry
+      setAccepting(false);
+    }
+  }
 
   return (
     <div
@@ -106,7 +120,7 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
           </Card>
 
           <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={accepting}>
               Fechar
             </Button>
             {alreadyCaptured ? (
@@ -116,14 +130,11 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
             ) : (
               <Button
                 type="button"
-                onClick={() => {
-                  if (onAccept) {
-                    onAccept(shift);
-                  }
-                  onClose();
-                }}
+                onClick={handleAccept}
+                disabled={accepting}
+                aria-busy={accepting}
               >
-                Aceitar plantao
+                {accepting ? "Aceitando..." : "Aceitar plantao"}
               </Button>
             )}
           </div>
