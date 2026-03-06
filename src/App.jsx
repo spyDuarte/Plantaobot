@@ -14,6 +14,13 @@ import {
   signup,
 } from './services/authApi.js';
 import { ApiError } from './services/apiClient.js';
+import {
+  normalizeEmailInput,
+  validateEmailPayload,
+  validateLoginForm,
+  validateResetPassword,
+  validateSignupForm,
+} from './utils/authValidation.js';
 
 const STATUS = {
   LOADING: 'loading',
@@ -341,8 +348,18 @@ export default function App() {
     setBusy(true);
     setMessage(null);
 
+    const validation = validateLoginForm(loginForm);
+
+    if (!validation.valid) {
+      setMessage({ tone: 'warning', text: validation.message });
+      setBusy(false);
+      return;
+    }
+
+    setLoginForm(validation.normalized);
+
     try {
-      await login(loginForm);
+      await login(validation.normalized);
       await loadCurrentSession();
     } catch (error) {
       if (error instanceof ApiError && error.status === 403) {
@@ -369,14 +386,24 @@ export default function App() {
     setBusy(true);
     setMessage(null);
 
+    const validation = validateSignupForm(signupForm);
+
+    if (!validation.valid) {
+      setMessage({ tone: 'warning', text: validation.message });
+      setBusy(false);
+      return;
+    }
+
+    setSignupForm(validation.normalized);
+
     try {
-      const result = await signup(signupForm);
+      const result = await signup(validation.normalized);
 
       if (result.emailVerified) {
         await loadCurrentSession();
       } else {
         setAuthMode(MODE.LOGIN);
-        setLoginForm((previous) => ({ ...previous, email: signupForm.email }));
+        setLoginForm((previous) => ({ ...previous, email: validation.normalized.email }));
         setMessage({ tone: 'info', text: 'Conta criada. Verifique seu email para ativar o acesso.' });
       }
     } catch (error) {
@@ -391,8 +418,18 @@ export default function App() {
     setBusy(true);
     setMessage(null);
 
+    const validation = validateEmailPayload(forgotEmail);
+
+    if (!validation.valid) {
+      setMessage({ tone: 'warning', text: validation.message });
+      setBusy(false);
+      return;
+    }
+
+    setForgotEmail(validation.normalized);
+
     try {
-      await forgotPassword({ email: forgotEmail });
+      await forgotPassword({ email: validation.normalized });
       setMessage({ tone: 'success', text: 'Enviamos um link para redefinir sua senha.' });
     } catch (error) {
       setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível enviar o email de recuperação.') });
@@ -406,8 +443,16 @@ export default function App() {
     setBusy(true);
     setMessage(null);
 
+    const validation = validateResetPassword(resetValue);
+
+    if (!validation.valid) {
+      setMessage({ tone: 'warning', text: validation.message });
+      setBusy(false);
+      return;
+    }
+
     try {
-      await resetPassword({ newPassword: resetValue });
+      await resetPassword({ newPassword: validation.normalized });
       setResetValue('');
       setMessage({ tone: 'success', text: 'Senha atualizada com sucesso.' });
       await loadCurrentSession();
@@ -424,7 +469,9 @@ export default function App() {
   );
 
   const handleResendVerification = useCallback(async () => {
-    if (!resendTargetEmail) {
+    const validation = validateEmailPayload(resendTargetEmail);
+
+    if (!validation.valid) {
       setMessage({ tone: 'warning', text: 'Informe um email para reenviar o link de confirmação.' });
       return;
     }
@@ -433,7 +480,7 @@ export default function App() {
     setMessage(null);
 
     try {
-      await resendVerification({ email: resendTargetEmail });
+      await resendVerification({ email: validation.normalized });
       setMessage({ tone: 'success', text: 'Email de verificação reenviado.' });
     } catch (error) {
       setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível reenviar o email de verificação.') });
@@ -517,7 +564,9 @@ export default function App() {
             type="email"
             placeholder="Email"
             value={loginForm.email}
-            onChange={(event) => setLoginForm((previous) => ({ ...previous, email: event.target.value }))}
+            onChange={(event) =>
+              setLoginForm((previous) => ({ ...previous, email: normalizeEmailInput(event.target.value) }))
+            }
             autoComplete="email"
             required
           />
@@ -549,7 +598,9 @@ export default function App() {
             type="email"
             placeholder="Email"
             value={signupForm.email}
-            onChange={(event) => setSignupForm((previous) => ({ ...previous, email: event.target.value }))}
+            onChange={(event) =>
+              setSignupForm((previous) => ({ ...previous, email: normalizeEmailInput(event.target.value) }))
+            }
             autoComplete="email"
             required
           />
@@ -574,7 +625,7 @@ export default function App() {
             type="email"
             placeholder="Email"
             value={forgotEmail}
-            onChange={(event) => setForgotEmail(event.target.value)}
+            onChange={(event) => setForgotEmail(normalizeEmailInput(event.target.value))}
             autoComplete="email"
             required
           />
