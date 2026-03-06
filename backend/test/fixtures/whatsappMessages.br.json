@@ -1,0 +1,32 @@
+[
+  {
+    "id": "msg-001",
+    "text": "Cobertura UPA centro hoje 19h-7h, R$ 1200 livre",
+    "expectedOffer": true
+  },
+  {
+    "id": "msg-002",
+    "text": "Urgente: troca de plantão PS zona sul 7 às 19",
+    "expectedOffer": true
+  },
+  {
+    "id": "msg-003",
+    "text": "Disponibilidade imediata para encaixe em Santa Casa",
+    "expectedOffer": true
+  },
+  {
+    "id": "msg-004",
+    "text": "Pessoal, alguém tem contato de laboratório para exame?",
+    "expectedOffer": false
+  },
+  {
+    "id": "msg-005",
+    "text": "Bom dia grupo, ata da reunião enviada no e-mail",
+    "expectedOffer": false
+  },
+  {
+    "id": "msg-006",
+    "text": "Cobrir plantao H. Sao Lucas 24h valor 1800",
+    "expectedOffer": true
+  }
+]
