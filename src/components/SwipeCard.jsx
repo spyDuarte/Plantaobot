@@ -38,8 +38,8 @@ export default function SwipeCard({shift,prefs,onAccept,onReject,index,total}) {
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:14}}>
-            {[["📅",shift.date],["⏰",shift.hours],["📍",shift.dist+"km"],["🩺",shift.spec]].map(([ic,v])=>(
-              <div key={v} style={{background:"rgba(255,255,255,0.04)",borderRadius:9,padding:"8px 10px",fontSize:11,color:C.tx1}}>{ic} {v}</div>
+            {[["📅",shift.date],["⏰",shift.hours],["📍",shift.dist+"km"],["🩺",shift.spec]].map(([ic,v], idx)=>(
+              <div key={`${shift.id || "shift"}-${ic}-${v || "na"}-${idx}`} style={{background:"rgba(255,255,255,0.04)",borderRadius:9,padding:"8px 10px",fontSize:11,color:C.tx1}}>{ic} {v}</div>
             ))}
           </div>
           <ScBar sc={sc} h={5}/>
