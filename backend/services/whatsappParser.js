@@ -2,34 +2,44 @@ import crypto from 'node:crypto';
 
 // Keywords that indicate a shift offer in Portuguese medical group chats
 const OFFER_KEYWORD_PATTERNS = [
-  /plant[aã]o/i,
+  /plantao/i,
   /sobreaviso/i,
-  /escala\s+(m[eé]dic|de\s+plant)/i,
-  /vaga\s+(para\s+)?m[eé]dic/i,
+  /escala\s+(medic|de\s+plant)/i,
+  /vaga\s+(para\s+)?medic/i,
   /oportunidade.*plant/i,
-  /disponível.*plant/i,
-  /plant.*disponível/i,
-  /preciso.*m[eé]dic/i,
-  /m[eé]dic.*preciso/i,
+  /disponivel.*plant/i,
+  /plant.*disponivel/i,
+  /preciso.*medic/i,
+  /medic.*preciso/i,
+  /cobertura/i,
+  /cobrir\s+plantao/i,
+  /troca\s+de\s+plantao/i,
+  /urgente/i,
+  /encaixe/i,
+  /disponibilidade\s+imediata/i,
 ];
 
 // Value extraction patterns (Brazilian Reais)
 const VALUE_PATTERNS = [
-  /r\$\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
-  /valor[:\s]+r?\$?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
-  /pagamento[:\s]+r?\$?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
-  /remunera[cç][aã]o[:\s]+r?\$?\s*([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
+  /r\$\s*([0-9]{1,5}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
+  /valor[:\s]+r?\$?\s*([0-9]{1,5}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
+  /pagamento[:\s]+r?\$?\s*([0-9]{1,5}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
+  /remuneracao[:\s]+r?\$?\s*([0-9]{1,5}(?:\.[0-9]{3})*(?:,[0-9]{2})?)/i,
+  /\b([0-9]{1,5}(?:,[0-9]{2})?)\s*livre\b/i,
 ];
 
 // Hospital/facility extraction patterns
 const HOSPITAL_PATTERNS = [
-  /hospital[:\s]+([^\n,]+)/i,
-  /\bhsp\b[:\s]+([^\n,]+)/i,
-  /\bupa\b[:\s]*([^\n,]*)/i,
-  /\bhc\b[:\s]+([^\n,]+)/i,
-  /unidade[:\s]+([^\n,]+)/i,
-  /cl[ií]nica[:\s]+([^\n,]+)/i,
-  /pronto.socorro[:\s]+([^\n,]+)/i,
+  /(santa\s+casa(?:\s+de\s+[^\n,;]+)?)/i,
+  /\bhospital\b[:\s-]+([^\n,;]+)/i,
+  /\bhsp\b[:\s-]+([^\n,;]+)/i,
+  /\bh\.?\s*[:\s-]+([^\n,;]+)/i,
+  /\bupa\b[:\s-]*([^\n,;]*)/i,
+  /\bhc\b[:\s-]+([^\n,;]+)/i,
+  /\bps\b[:\s-]+([^\n,;]+)/i,
+  /unidade[:\s-]+([^\n,;]+)/i,
+  /cl[ií]nica[:\s-]+([^\n,;]+)/i,
+  /pronto\s*socorro[:\s-]+([^\n,;]+)/i,
 ];
 
 // Specialty keyword mapping (Brazilian medical specialties)
@@ -70,9 +80,17 @@ const WEEKDAY_LABELS = {
   domingo: 'Dom',
 };
 
+function normalizeForMatching(text) {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
 function parseValue(text) {
+  const normalizedText = normalizeForMatching(text);
   for (const pattern of VALUE_PATTERNS) {
-    const match = text.match(pattern);
+    const match = normalizedText.match(pattern);
     if (match) {
       const raw = match[1].replace(/\./g, '').replace(',', '.');
       const num = parseFloat(raw);
@@ -85,8 +103,9 @@ function parseValue(text) {
 }
 
 function parseHospital(text) {
+  const normalizedText = normalizeForMatching(text);
   for (const pattern of HOSPITAL_PATTERNS) {
-    const match = text.match(pattern);
+    const match = normalizedText.match(pattern);
     if (match?.[1]) {
       const name = match[1].trim();
       if (name.length >= 2) {
@@ -98,7 +117,7 @@ function parseHospital(text) {
 }
 
 function parseSpecialty(text) {
-  const lower = text.toLowerCase();
+  const lower = normalizeForMatching(text);
   for (const [pattern, label] of Object.entries(SPECIALTY_MAP)) {
     if (new RegExp(pattern, 'i').test(lower)) {
       return label;
@@ -108,23 +127,24 @@ function parseSpecialty(text) {
 }
 
 function parseDate(text) {
+  const normalizedText = normalizeForMatching(text);
   // Day name + numeric date: "Sexta 15/03" or "Sábado, 22/02"
   for (const [pattern, label] of Object.entries(WEEKDAY_LABELS)) {
     const regex = new RegExp(`(${pattern})[,\\s]+(\\d{1,2}\\/\\d{1,2}(?:\\/\\d{2,4})?)`, 'i');
-    const match = text.match(regex);
+    const match = normalizedText.match(regex);
     if (match) {
       return `${label} ${match[2]}`;
     }
   }
 
   // "data: 15/03"
-  const dataMatch = text.match(/data[:\s]+([^\n]+)/i);
+  const dataMatch = normalizedText.match(/data[:\s]+([^\n]+)/i);
   if (dataMatch?.[1]) {
     return dataMatch[1].trim().slice(0, 40);
   }
 
   // Bare numeric date
-  const dateMatch = text.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
+  const dateMatch = normalizedText.match(/(\d{1,2}\/\d{1,2}(?:\/\d{2,4})?)/);
   if (dateMatch) {
     return dateMatch[1];
   }
@@ -133,8 +153,13 @@ function parseDate(text) {
 }
 
 function parseHours(text) {
+  const normalizedText = normalizeForMatching(text);
+
+  if (/\b12x36\b/i.test(normalizedText)) return '12h';
+  if (/\b24\s*h\b/i.test(normalizedText) || /plantao\s+de\s+24/i.test(normalizedText)) return '24h';
+
   // Range format: "07h às 19h" or "07x19" or "07 a 19"
-  const rangeMatch = text.match(/(\d{1,2})h?\s*(?:[aà×x]|às)\s*(\d{1,2})h/i);
+  const rangeMatch = normalizedText.match(/(\d{1,2})h?\s*(?:-|as|a|x|×)\s*(\d{1,2})h?/i);
   if (rangeMatch) {
     const start = parseInt(rangeMatch[1], 10);
     const end = parseInt(rangeMatch[2], 10);
@@ -144,7 +169,7 @@ function parseHours(text) {
   }
 
   // Colon time range: "07:00 a 19:00"
-  const colonMatch = text.match(/(\d{2}):00\s*[aà]\s*(\d{2}):00/);
+  const colonMatch = normalizedText.match(/(\d{1,2}):00\s*(?:a|as|-)\s*(\d{1,2}):00/);
   if (colonMatch) {
     const start = parseInt(colonMatch[1], 10);
     const end = parseInt(colonMatch[2], 10);
@@ -154,23 +179,23 @@ function parseHours(text) {
   }
 
   // Duration mention: "12 horas" or "duração: 12h"
-  const durationMatch = text.match(/(\d+)\s*horas?/i) || text.match(/dura[cç][aã]o[:\s]+(\d+)\s*h/i);
+  const durationMatch = normalizedText.match(/(\d+)\s*horas?/i) || normalizedText.match(/duracao[:\s]+(\d+)\s*h/i);
   if (durationMatch) {
     return `${durationMatch[1]}h`;
   }
 
   // Common shift length keywords
-  if (/plant[aã]o\s+de\s+6h/i.test(text)) return '6h';
-  if (/plant[aã]o\s+de\s+24/i.test(text)) return '24h';
+  if (/plantao\s+de\s+6h/i.test(normalizedText)) return '6h';
 
   return '12h';
 }
 
 function parseLocation(text) {
+  const normalizedText = normalizeForMatching(text);
   // "Cidade: São Paulo" or "SP - São Paulo"
   const cityMatch =
-    text.match(/cidad[ae][:\s]+([^\n,]+)/i) ||
-    text.match(/bairro[:\s]+([^\n,]+)/i) ||
+    normalizedText.match(/cidad[ae][:\s]+([^\n,]+)/i) ||
+    normalizedText.match(/bairro[:\s]+([^\n,]+)/i) ||
     text.match(/\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõ]+(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõ]+)*)\s*[-–]\s*[A-Z]{2}\b/);
 
   if (cityMatch?.[1]) {
@@ -189,7 +214,8 @@ export function isShiftOffer(text) {
   if (!text || typeof text !== 'string') {
     return false;
   }
-  return OFFER_KEYWORD_PATTERNS.some((pattern) => pattern.test(text));
+  const normalizedText = normalizeForMatching(text);
+  return OFFER_KEYWORD_PATTERNS.some((pattern) => pattern.test(normalizedText));
 }
 
 /**
