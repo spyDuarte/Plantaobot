@@ -18,6 +18,14 @@ export async function resetWhatsappToken() {
 }
 
 /**
+ * Starts WhatsApp connection through Evolution API.
+ * @returns {Promise<{ instanceId: string, qrCode: string | null, state: string, connected: boolean }>}
+ */
+export async function connectWhatsapp() {
+  return apiRequest('/whatsapp/connect', { method: 'POST' });
+}
+
+/**
  * Builds the full webhook URL for a given user ID and token.
  * Resolves against the API base URL when it is an absolute URL,
  * or falls back to the current page origin for relative paths.

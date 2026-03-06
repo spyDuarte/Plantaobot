@@ -4,7 +4,8 @@ import { DAYS, SPECS } from "../../data/mockData.js";
 import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, PageHeader, Toggle } from "../ui/index.jsx";
 import { S } from "../../styles/index.js";
-import { fetchWhatsappConfig, resetWhatsappToken, buildWebhookUrl } from "../../services/whatsappApi.js";
+import { ApiError } from "../../services/apiClient.js";
+import { fetchWhatsappConfig, resetWhatsappToken, buildWebhookUrl, connectWhatsapp } from "../../services/whatsappApi.js";
 
 export default function SettingsTab({
   uiV2,
@@ -23,6 +24,29 @@ export default function SettingsTab({
   const [waLoading, setWaLoading] = useState(true);
   const [waCopied, setWaCopied] = useState(false);
   const [waResetting, setWaResetting] = useState(false);
+  const [waConnecting, setWaConnecting] = useState(false);
+  const [waConnectError, setWaConnectError] = useState("");
+  const [waQrCode, setWaQrCode] = useState("");
+
+  function getFriendlyConnectError(error) {
+    if (!(error instanceof ApiError)) {
+      return "Não foi possível conectar ao WhatsApp agora. Tente novamente em instantes.";
+    }
+
+    if (error.data?.error === "EVOLUTION_TIMEOUT") {
+      return "A Evolution API demorou para responder. Tente novamente em alguns segundos.";
+    }
+
+    if (error.data?.error === "EVOLUTION_INVALID_KEY") {
+      return "A chave da Evolution API parece inválida. Confira a configuração no backend.";
+    }
+
+    if (error.data?.error === "EVOLUTION_INSTANCE_EXISTS") {
+      return "Esta instância já existe. Tentando reutilizar a conexão atual.";
+    }
+
+    return error.message || "Falha ao iniciar conexão com WhatsApp.";
+  }
 
   const loadWaConfig = useCallback(async () => {
     setWaLoading(true);
@@ -73,6 +97,25 @@ export default function SettingsTab({
       // ignore
     } finally {
       setWaResetting(false);
+    }
+  }
+
+  async function handleConnectWhatsapp() {
+    setWaConnecting(true);
+    setWaConnectError("");
+
+    try {
+      const result = await connectWhatsapp();
+      setWaQrCode(result.qrCode || "");
+      setWaConfig((prev) => prev ? {
+        ...prev,
+        instanceId: result.instanceId || prev.instanceId,
+        connected: Boolean(result.connected),
+      } : prev);
+    } catch (error) {
+      setWaConnectError(getFriendlyConnectError(error));
+    } finally {
+      setWaConnecting(false);
     }
   }
 
@@ -176,8 +219,44 @@ export default function SettingsTab({
                 <Button type="button" variant="secondary" onClick={handleResetToken} disabled={waResetting}>
                   {waResetting ? "Gerando..." : "Novo token"}
                 </Button>
+                <Button type="button" variant="secondary" onClick={handleConnectWhatsapp} disabled={waConnecting}>
+                  {waConnecting ? "Conectando..." : "Conectar WhatsApp"}
+                </Button>
               </div>
             </div>
+
+            {waConnectError ? (
+              <div
+                style={{
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  fontSize: 11,
+                  color: "#991b1b",
+                }}
+              >
+                {waConnectError}
+              </div>
+            ) : null}
+
+            {waQrCode ? (
+              <div
+                style={{
+                  background: C.surface2,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 8,
+                  padding: 10,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <div style={{ fontSize: 11, color: C.text2 }}>Escaneie o QR code no WhatsApp para vincular.</div>
+                <img src={waQrCode} alt="QR code para conectar WhatsApp" style={{ width: 220, height: 220, objectFit: "contain", background: "#fff", borderRadius: 6 }} />
+              </div>
+            ) : null}
 
             <div
               style={{
@@ -376,5 +455,4 @@ export default function SettingsTab({
     </div>
   );
 }
-
 

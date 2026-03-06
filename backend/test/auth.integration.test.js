@@ -5,15 +5,18 @@ import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { createMockAuthService, createMockDataStore, extractCsrfToken } from './helpers/mockDeps.js';
 
-async function setup() {
+async function setup(options = {}) {
   const app = createApp({
     authService: createMockAuthService(),
     dataStore: createMockDataStore(),
+    whatsappProvider: options.whatsappProvider,
     config: {
       appBaseUrl: 'http://localhost:5173',
       secureCookies: false,
       cookieDomain: '',
       nodeEnv: 'test',
+      evolutionApiUrl: options.evolutionApiUrl || '',
+      evolutionApiKey: options.evolutionApiKey || '',
     },
   });
 
@@ -244,5 +247,55 @@ describe('backend auth integration', () => {
     expect(second.status).toBe(200);
     expect(second.body.imported).toBe(false);
     expect(second.body.alreadyImported).toBe(true);
+  });
+
+  it('connects WhatsApp and returns QR payload', async () => {
+    const whatsappProvider = {
+      async createInstanceForUser() {
+        return { instanceId: 'user-user-1' };
+      },
+      async getInstanceQr() {
+        return { qrCode: 'data:image/png;base64,abc123', state: 'connecting' };
+      },
+    };
+
+    const { agent, csrf } = await setup({
+      evolutionApiUrl: 'http://localhost:8081',
+      evolutionApiKey: 'test-key',
+      whatsappProvider,
+    });
+
+    await agent
+      .post('/api/auth/signup')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'Dr. João',
+        email: 'joao@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/auth/confirm')
+      .set('X-CSRF-Token', csrf)
+      .send({ token_hash: 'joao@example.com', type: 'signup' });
+
+    await agent
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        email: 'joao@example.com',
+        password: 'SenhaForte123',
+      });
+
+    const response = await agent
+      .post('/api/whatsapp/connect')
+      .set('X-CSRF-Token', csrf)
+      .send({});
+
+    expect(response.status).toBe(200);
+    expect(response.body.instanceId).toBe('user-user-1');
+    expect(response.body.qrCode).toBe('data:image/png;base64,abc123');
+    expect(response.body.state).toBe('connecting');
+    expect(response.body.connected).toBe(false);
   });
 });
