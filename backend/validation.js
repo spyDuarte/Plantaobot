@@ -229,3 +229,41 @@ export function validateEvent(body) {
     timestamp: optionalString(payload.timestamp, { max: 64 }) || new Date().toISOString(),
   };
 }
+
+const CHAT_ROLES = new Set(['user', 'assistant']);
+
+export function validateChatPayload(body) {
+  const payload = ensureObject(body);
+
+  const rawMessages = ensureArray(payload.messages, 'messages', { max: 50 });
+  if (rawMessages.length === 0) {
+    throw createHttpError(422, 'VALIDATION_ERROR', 'Payload inválido.', {
+      field: 'messages',
+      message: 'messages deve conter pelo menos uma mensagem.',
+    });
+  }
+
+  const messages = rawMessages.map((msg, index) => {
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) {
+      throw createHttpError(422, 'VALIDATION_ERROR', 'Payload inválido.', {
+        field: `messages[${index}]`,
+        message: 'Cada mensagem deve ser um objeto.',
+      });
+    }
+    if (!CHAT_ROLES.has(msg.role)) {
+      throw createHttpError(422, 'VALIDATION_ERROR', 'Payload inválido.', {
+        field: `messages[${index}].role`,
+        message: 'role deve ser "user" ou "assistant".',
+      });
+    }
+    return {
+      role: msg.role,
+      content: requireString(msg.content, `messages[${index}].content`, { min: 1, max: 2000 }),
+    };
+  });
+
+  return {
+    messages,
+    system: optionalString(payload.system, { max: 2000 }),
+  };
+}

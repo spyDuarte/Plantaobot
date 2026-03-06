@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { C } from "../constants/colors.js";
 import { fmt } from "../utils/index.js";
 import { Badge, Button, Card, Input } from "./ui/index.jsx";
+import { apiRequest } from "../services/apiClient.js";
 
 function sanitizePrompt(value) {
   return value.replace(/\s+/g, " ").trim().slice(0, 500);
@@ -44,44 +45,22 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
     const history = [...messages, { role: "user", content: prompt }];
     setMessages(history);
 
-    const context =
+    const system =
       "Voce e um assistente para medicos que usam o PlantaoBot. " +
       `Perfil: valor minimo R$${fmt(prefs.minVal)}, distancia maxima ${prefs.maxDist}km, dias ${prefs.days.join(", ")}, especialidades ${prefs.specs.join(", ")}. ` +
       `Capturados: ${captured.length} (R$ ${fmt(captured.reduce((sum, shift) => sum + shift.val, 0))}). ` +
       `Descartados: ${rejected.length}. ` +
       "Responda em portugues do Brasil, direto, com no maximo 3 paragrafos e foco pratico.";
 
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      setMessages((previous) => [
-        ...previous,
-        {
-          role: "assistant",
-          content: "Chave de API nao configurada. Defina VITE_ANTHROPIC_API_KEY no arquivo .env.",
-        },
-      ]);
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const data = await apiRequest("/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: context,
+        body: {
+          system,
           messages: history.map((message) => ({ role: message.role, content: message.content })),
-        }),
+        },
       });
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || "Nao consegui responder no momento.";
+      const reply = data.reply || "Nao consegui responder no momento.";
       setMessages((previous) => [...previous, { role: "assistant", content: reply }]);
     } catch {
       setMessages((previous) => [...previous, { role: "assistant", content: "Erro ao conectar com a IA. Tente novamente." }]);

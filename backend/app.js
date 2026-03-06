@@ -10,6 +10,7 @@ import {
 } from './security.js';
 import {
   validateBootstrapImport,
+  validateChatPayload,
   validateConfirm,
   validateEmailPayload,
   validateEvent,
@@ -499,6 +500,37 @@ export function createApp(options = {}) {
     const payload = validateEvent(req.body);
     await dataStore.trackEvent(req.auth.user.id, payload);
     res.status(201).json({ ok: true });
+  }));
+
+  app.post('/api/chat', requireAuth({}, deps), asyncRoute(async (req, res) => {
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicKey) {
+      throw createHttpError(503, 'AI_UNAVAILABLE', 'Serviço de IA não configurado.');
+    }
+
+    const payload = validateChatPayload(req.body);
+
+    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: payload.system || undefined,
+        messages: payload.messages,
+      }),
+    });
+
+    if (!anthropicRes.ok) {
+      throw createHttpError(502, 'AI_ERROR', 'Erro ao comunicar com a IA.');
+    }
+
+    const data = await anthropicRes.json();
+    res.json({ reply: data.content?.[0]?.text || '' });
   }));
 
   app.use((error, _req, res, _next) => {
