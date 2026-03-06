@@ -1,5 +1,5 @@
 ﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App.jsx';
 import { ApiError } from './services/apiClient.js';
 import * as authApi from './services/authApi.js';
@@ -72,6 +72,59 @@ describe('App auth gate', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Atualizar senha' })).toBeInTheDocument();
+    });
+  });
+
+
+  it('blocks login submit with invalid email before calling API', async () => {
+    authApi.fetchMe.mockRejectedValue(new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'invalido' } });
+    fireEvent.change(screen.getByPlaceholderText('Senha'), { target: { value: 'Senha123' } });
+    const loginForm = screen.getByPlaceholderText('Email').closest('form');
+    fireEvent.submit(loginForm);
+
+    await waitFor(() => {
+      expect(screen.getByText('Email em formato inválido.')).toBeInTheDocument();
+    });
+
+    expect(authApi.login).not.toHaveBeenCalled();
+  });
+
+  it('shows validation warning when resend verification has no valid email', async () => {
+    authApi.fetchMe.mockRejectedValue(new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }));
+    authApi.login.mockRejectedValue(new ApiError('Email não verificado.', { status: 403, path: '/auth/login' }));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'sem-arroba' } });
+    fireEvent.change(screen.getByPlaceholderText('Senha'), { target: { value: 'Senha123' } });
+    let loginForm = screen.getByPlaceholderText('Email').closest('form');
+    fireEvent.submit(loginForm);
+
+    // Ajusta para credenciais válidas para simular conta não verificada e entrar na tela correta
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'med@example.com' } });
+    loginForm = screen.getByPlaceholderText('Email').closest('form');
+    fireEvent.submit(loginForm);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Reenviar verificação' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reenviar verificação' }));
+
+    await waitFor(() => {
+      expect(authApi.resendVerification).toHaveBeenCalledWith({ email: 'med@example.com' });
     });
   });
 
