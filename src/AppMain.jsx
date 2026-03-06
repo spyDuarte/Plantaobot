@@ -829,6 +829,7 @@ export default function AppMain({ onLogout = null }) {
       registerCapture({ ...shift, ...persisted }, { fromAuto: false });
     } catch (error) {
       toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
+      throw error;
     }
   }
 
