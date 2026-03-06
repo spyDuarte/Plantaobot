@@ -31,3 +31,5 @@
         value: true
       - key: COOKIE_SAME_SITE
         value: lax
+      - key: ANTHROPIC_API_KEY
+        sync: false

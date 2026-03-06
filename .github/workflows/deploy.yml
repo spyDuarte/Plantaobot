@@ -54,10 +54,6 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           # Optional override for email redirect links
           VITE_AUTH_REDIRECT_URL: ${{ secrets.VITE_AUTH_REDIRECT_URL }}
-          # Optional: add VITE_ANTHROPIC_API_KEY as a repository secret
-          # to enable the AI chat feature on the deployed site.
-          # Go to: Settings -> Secrets and variables -> Actions -> New repository secret
-          VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
