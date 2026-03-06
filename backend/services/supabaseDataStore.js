@@ -286,6 +286,17 @@ export function createSupabaseDataStore(config) {
       };
     },
 
+    async getWhatsappStatus(userId) {
+      const config = await this.getWhatsappConfig(userId);
+
+      return {
+        connected: Boolean(config.connected),
+        connectedAt: config.connectedAt || null,
+        instanceId: config.instanceId || null,
+        phoneNumber: config.phoneNumber || null,
+      };
+    },
+
     async ensureWhatsappConfig(userId) {
       const token = crypto.randomUUID();
 
@@ -357,19 +368,44 @@ export function createSupabaseDataStore(config) {
     },
 
     async saveWhatsappInstanceMetadata(userId, { instanceId, connected = false }) {
+      const now = nowIso();
+      const payload = {
+        user_id: userId,
+        instance_id: instanceId || null,
+        connected: Boolean(connected),
+        connected_at: connected ? now : null,
+        updated_at: now,
+      };
+
       const { error } = await client
         .from('whatsapp_config')
-        .upsert(
-          {
-            user_id: userId,
-            instance_id: instanceId || null,
-            connected: Boolean(connected),
-            updated_at: nowIso(),
-          },
-          { onConflict: 'user_id' },
-        );
+        .upsert(payload, { onConflict: 'user_id' });
 
       assertNoError(error, 'Failed to persist WhatsApp instance metadata.');
+    },
+
+    async saveWhatsappStatusTransition(userId, { connected, instanceId = null, phoneNumber = null }) {
+      const now = nowIso();
+      const payload = {
+        user_id: userId,
+        connected: Boolean(connected),
+        connected_at: connected ? now : null,
+        updated_at: now,
+      };
+
+      if (instanceId !== null) {
+        payload.instance_id = String(instanceId);
+      }
+
+      if (phoneNumber !== null) {
+        payload.phone_number = String(phoneNumber);
+      }
+
+      const { error } = await client
+        .from('whatsapp_config')
+        .upsert(payload, { onConflict: 'user_id' });
+
+      assertNoError(error, 'Failed to persist WhatsApp status transition.');
     },
 
     async saveWhatsappMessage(userId, { messageId, jid, groupName, senderName, rawText, isOffer, offer, receivedAt }) {

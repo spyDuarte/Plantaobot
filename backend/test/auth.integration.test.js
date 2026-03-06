@@ -298,4 +298,73 @@ describe('backend auth integration', () => {
     expect(response.body.state).toBe('connecting');
     expect(response.body.connected).toBe(false);
   });
+  it('returns authenticated WhatsApp status and persists webhook status transitions', async () => {
+    const { agent, csrf } = await setup();
+
+    await agent
+      .post('/api/auth/signup')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'Dr. Caio',
+        email: 'caio@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/auth/confirm')
+      .set('X-CSRF-Token', csrf)
+      .send({ token_hash: 'caio@example.com', type: 'signup' });
+
+    await agent
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        email: 'caio@example.com',
+        password: 'SenhaForte123',
+      });
+
+    const waConfig = await agent.get('/api/whatsapp/config');
+
+    const webhookConnected = await agent
+      .post(`/api/whatsapp/webhook/${waConfig.body.userId}?token=${waConfig.body.webhookToken}`)
+      .send({
+        event: 'connection.update',
+        instance: 'instance-caio',
+        data: {
+          state: 'open',
+          number: '5511999999999',
+        },
+      });
+
+    expect(webhookConnected.status).toBe(200);
+    expect(webhookConnected.body.type).toBe('status');
+
+    const statusConnected = await agent.get('/api/whatsapp/status');
+    expect(statusConnected.status).toBe(200);
+    expect(statusConnected.body.connected).toBe(true);
+    expect(statusConnected.body.instanceId).toBe('instance-caio');
+    expect(statusConnected.body.phoneNumber).toBe('5511999999999');
+    expect(statusConnected.body.connectedAt).toBeTruthy();
+
+    const webhookDisconnected = await agent
+      .post(`/api/whatsapp/webhook/${waConfig.body.userId}?token=${waConfig.body.webhookToken}`)
+      .send({
+        event: 'connection.update',
+        instance: 'instance-caio',
+        data: {
+          state: 'close',
+          number: '5511999999999',
+        },
+      });
+
+    expect(webhookDisconnected.status).toBe(200);
+
+    const statusDisconnected = await agent.get('/api/whatsapp/status');
+    expect(statusDisconnected.status).toBe(200);
+    expect(statusDisconnected.body.connected).toBe(false);
+    expect(statusDisconnected.body.connectedAt).toBeNull();
+    expect(statusDisconnected.body.instanceId).toBe('instance-caio');
+    expect(statusDisconnected.body.phoneNumber).toBe('5511999999999');
+  });
+
 });
