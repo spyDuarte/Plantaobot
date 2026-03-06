@@ -610,6 +610,48 @@ export function createSupabaseDataStore(config) {
       assertNoError(insertError, 'Failed to save groups.');
     },
 
+    async mergeGroups(userId, groups) {
+      if (!Array.isArray(groups) || groups.length === 0) {
+        return this.getGroups(userId);
+      }
+
+      const normalizedGroups = groups.map((group, index) => ({
+        id: String(group.id || index + 1),
+        name: String(group.name || `Grupo ${index + 1}`).slice(0, 120),
+        members: Number(group.members || 0),
+        emoji: String(group.emoji || '🏥').slice(0, 24),
+        active: Boolean(group.active),
+      }));
+
+      const groupIds = normalizedGroups.map((group) => group.id);
+
+      const { data: existingRows, error: existingError } = await client
+        .from('groups')
+        .select('group_id, active')
+        .eq('user_id', userId)
+        .in('group_id', groupIds);
+      assertNoError(existingError, 'Failed to fetch existing groups before merge.');
+
+      const activeByGroupId = new Map((existingRows || []).map((row) => [row.group_id, Boolean(row.active)]));
+
+      const rows = normalizedGroups.map((group) => ({
+        user_id: userId,
+        group_id: group.id,
+        name: group.name,
+        members: group.members,
+        emoji: group.emoji,
+        active: activeByGroupId.has(group.id) ? activeByGroupId.get(group.id) : group.active,
+        updated_at: nowIso(),
+      }));
+
+      const { error: upsertError } = await client
+        .from('groups')
+        .upsert(rows, { onConflict: 'user_id,group_id' });
+      assertNoError(upsertError, 'Failed to merge groups.');
+
+      return this.getGroups(userId);
+    },
+
     async clearHistory(userId) {
       await Promise.all([
         this.clearCaptures(userId),

@@ -347,6 +347,23 @@ export function createMockDataStore() {
       groups.set(userId, value);
     },
 
+    async mergeGroups(userId, value) {
+      const current = groups.get(userId) || [];
+      const activeById = new Map(current.map((group) => [String(group.id), Boolean(group.active)]));
+
+      const merged = (Array.isArray(value) ? value : []).map((group) => {
+        const id = String(group.id);
+        return {
+          ...group,
+          id,
+          active: activeById.has(id) ? activeById.get(id) : Boolean(group.active),
+        };
+      });
+
+      groups.set(userId, merged);
+      return merged;
+    },
+
     async clearHistory(userId) {
       captures.set(userId, []);
       rejections.set(userId, []);

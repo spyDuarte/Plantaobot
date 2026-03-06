@@ -367,4 +367,72 @@ describe('backend auth integration', () => {
     expect(statusDisconnected.body.phoneNumber).toBe('5511999999999');
   });
 
+  it('syncs WhatsApp groups preserving active flag from existing groups', async () => {
+    const whatsappProvider = {
+      async createInstanceForUser() {
+        return { instanceId: 'user-user-1' };
+      },
+      async getInstanceQr() {
+        return { qrCode: null, state: 'connecting' };
+      },
+      async listInstanceGroups() {
+        return [
+          { id: '1203630@g.us', name: 'Plantão UTI', members: 145, emoji: '🏥', active: true },
+          { id: '1203631@g.us', name: 'Clínica Geral', members: 89, emoji: '🏥', active: true },
+        ];
+      },
+    };
+
+    const { agent, csrf } = await setup({
+      evolutionApiUrl: 'http://localhost:8081',
+      evolutionApiKey: 'test-key',
+      whatsappProvider,
+    });
+
+    await agent
+      .post('/api/auth/signup')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'Dr. Rafaela',
+        email: 'rafaela@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/auth/confirm')
+      .set('X-CSRF-Token', csrf)
+      .send({ token_hash: 'rafaela@example.com', type: 'signup' });
+
+    await agent
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        email: 'rafaela@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/whatsapp/connect')
+      .set('X-CSRF-Token', csrf)
+      .send({});
+
+    await agent
+      .put('/api/groups')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        groups: [
+          { id: '1203630@g.us', name: 'Plantão UTI', members: 120, emoji: '🏥', active: false },
+        ],
+      });
+
+    const syncResponse = await agent
+      .get('/api/whatsapp/groups');
+
+    expect(syncResponse.status).toBe(200);
+    expect(syncResponse.body.groups).toEqual([
+      { id: '1203630@g.us', name: 'Plantão UTI', members: 145, emoji: '🏥', active: false },
+      { id: '1203631@g.us', name: 'Clínica Geral', members: 89, emoji: '🏥', active: true },
+    ]);
+  });
+
 });
