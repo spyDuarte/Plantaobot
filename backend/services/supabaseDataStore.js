@@ -356,6 +356,22 @@ export function createSupabaseDataStore(config) {
       return { webhookToken: newToken };
     },
 
+    async saveWhatsappInstanceMetadata(userId, { instanceId, connected = false }) {
+      const { error } = await client
+        .from('whatsapp_config')
+        .upsert(
+          {
+            user_id: userId,
+            instance_id: instanceId || null,
+            connected: Boolean(connected),
+            updated_at: nowIso(),
+          },
+          { onConflict: 'user_id' },
+        );
+
+      assertNoError(error, 'Failed to persist WhatsApp instance metadata.');
+    },
+
     async saveWhatsappMessage(userId, { messageId, jid, groupName, senderName, rawText, isOffer, offer, receivedAt }) {
       const row = {
         user_id: userId,

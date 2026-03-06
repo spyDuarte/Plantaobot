@@ -24,6 +24,7 @@ import {
 } from './validation.js';
 import { createSupabaseAuthService } from './services/supabaseAuthService.js';
 import { createSupabaseDataStore } from './services/supabaseDataStore.js';
+import { createWhatsappProvider } from './services/whatsappProvider.js';
 import {
   isShiftOffer,
   normalizeIncomingWebhook,
@@ -46,6 +47,8 @@ function defaultConfig() {
       : nodeEnv === 'production',
     cookieSameSite: process.env.COOKIE_SAME_SITE || 'lax',
     corsAllowedOrigins: process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ALLOWED_ORIGIN || '',
+    evolutionApiUrl: process.env.EVOLUTION_API_URL || '',
+    evolutionApiKey: process.env.EVOLUTION_API_KEY || '',
   };
 }
 
@@ -232,11 +235,17 @@ export function createApp(options = {}) {
 
   const authService = options.authService || createSupabaseAuthService(config);
   const dataStore = options.dataStore || createSupabaseDataStore(config);
+  const whatsappProvider = options.whatsappProvider || (
+    config.evolutionApiUrl && config.evolutionApiKey
+      ? createWhatsappProvider(config)
+      : null
+  );
 
   const deps = {
     config,
     authService,
     dataStore,
+    whatsappProvider,
   };
 
   const app = express();
@@ -601,6 +610,34 @@ export function createApp(options = {}) {
     res.json(result);
   }));
 
+  // POST /api/whatsapp/connect — creates/reuses instance and returns QR for pairing
+  app.post('/api/whatsapp/connect', requireAuth({}, deps), asyncRoute(async (req, res) => {
+    if (!whatsappProvider) {
+      throw createHttpError(503, 'EVOLUTION_NOT_CONFIGURED', 'Integração Evolution API não configurada no servidor.');
+    }
+
+    const userId = req.auth.user.id;
+    const current = await dataStore.getWhatsappConfig(userId);
+
+    const created = current.instanceId
+      ? { instanceId: current.instanceId }
+      : await whatsappProvider.createInstanceForUser({ userId });
+
+    await dataStore.saveWhatsappInstanceMetadata(userId, {
+      instanceId: created.instanceId,
+      connected: false,
+    });
+
+    const qr = await whatsappProvider.getInstanceQr({ instanceId: created.instanceId });
+
+    res.json({
+      instanceId: created.instanceId,
+      qrCode: qr.qrCode,
+      state: qr.state || 'connecting',
+      connected: false,
+    });
+  }));
+
   app.post('/api/chat', requireAuth({}, deps), asyncRoute(async (req, res) => {
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicKey) {
@@ -645,5 +682,3 @@ export function createApp(options = {}) {
 
   return app;
 }
-
-

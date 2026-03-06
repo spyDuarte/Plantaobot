@@ -155,6 +155,7 @@ export function createMockDataStore() {
   const rejections = new Map();
   const monitor = new Map();
   const imported = new Set();
+  const whatsappConfig = new Map();
 
   function ensureCollections(userId) {
     if (!captures.has(userId)) {
@@ -228,6 +229,41 @@ export function createMockDataStore() {
 
     async fetchFeed(_userId, { cursor }) {
       return { items: [], nextCursor: cursor || new Date().toISOString() };
+    },
+
+    async getWhatsappConfig(userId) {
+      if (!whatsappConfig.has(userId)) {
+        whatsappConfig.set(userId, {
+          userId,
+          webhookToken: `token-${userId}`,
+          instanceId: null,
+          connected: false,
+          connectedAt: null,
+        });
+      }
+
+      return whatsappConfig.get(userId);
+    },
+
+    async getWhatsappMessageCount() {
+      return 0;
+    },
+
+    async resetWebhookToken(userId) {
+      const current = await this.getWhatsappConfig(userId);
+      const webhookToken = `token-${Date.now()}`;
+      const next = { ...current, webhookToken };
+      whatsappConfig.set(userId, next);
+      return { webhookToken };
+    },
+
+    async saveWhatsappInstanceMetadata(userId, { instanceId, connected = false }) {
+      const current = await this.getWhatsappConfig(userId);
+      whatsappConfig.set(userId, {
+        ...current,
+        instanceId: instanceId || null,
+        connected: Boolean(connected),
+      });
     },
 
     async listCaptures(userId) {
