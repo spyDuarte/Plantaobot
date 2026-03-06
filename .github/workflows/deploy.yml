@@ -46,14 +46,14 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_PATH: ${{ env.VITE_BASE_PATH }}
-          # Optional backend API (monitor/captures). Keep empty to use default /api.
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          # Supabase client-side auth for GitHub Pages
+          # Supabase client-side auth
           VITE_AUTH_PROVIDER: supabase
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           # Optional override for email redirect links
           VITE_AUTH_REDIRECT_URL: ${{ secrets.VITE_AUTH_REDIRECT_URL }}
+          # Anthropic API key for AI chat (browser direct call)
+          VITE_ANTHROPIC_API_KEY: ${{ secrets.VITE_ANTHROPIC_API_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
