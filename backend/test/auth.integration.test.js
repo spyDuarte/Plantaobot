@@ -367,6 +367,68 @@ describe('backend auth integration', () => {
     expect(statusDisconnected.body.phoneNumber).toBe('5511999999999');
   });
 
+  it('drops group messages from inactive groups without persisting', async () => {
+    const { agent, csrf } = await setup();
+
+    await agent
+      .post('/api/auth/signup')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'Dr. Ivo',
+        email: 'ivo@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/auth/confirm')
+      .set('X-CSRF-Token', csrf)
+      .send({ token_hash: 'ivo@example.com', type: 'signup' });
+
+    await agent
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        email: 'ivo@example.com',
+        password: 'SenhaForte123',
+      });
+
+    const waConfig = await agent.get('/api/whatsapp/config');
+
+    await agent
+      .put('/api/groups')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        groups: [
+          { id: '120363999999999999@g.us', name: 'Grupo Bloqueado', members: 10, emoji: '🏥', active: false },
+        ],
+      });
+
+    const webhookResponse = await agent
+      .post(`/api/whatsapp/webhook/${waConfig.body.userId}?token=${waConfig.body.webhookToken}`)
+      .send({
+        event: 'messages.upsert',
+        data: {
+          key: {
+            remoteJid: '120363999999999999@g.us',
+            id: 'msg-inactive-1',
+          },
+          pushName: 'Dr. Sender',
+          message: {
+            conversation: 'Plantão amanhã 12h',
+          },
+          messageTimestamp: String(Math.floor(Date.now() / 1000)),
+        },
+      });
+
+    expect(webhookResponse.status).toBe(200);
+    expect(webhookResponse.body).toEqual({ ok: true, processed: false, reason: 'inactive_group' });
+
+    const feedResponse = await agent.get('/api/monitor/feed');
+    expect(feedResponse.status).toBe(200);
+    expect(feedResponse.body.items).toHaveLength(0);
+  });
+
+
   it('syncs WhatsApp groups preserving active flag from existing groups', async () => {
     const whatsappProvider = {
       async createInstanceForUser() {

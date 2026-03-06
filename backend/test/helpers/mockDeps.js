@@ -156,6 +156,7 @@ export function createMockDataStore() {
   const monitor = new Map();
   const imported = new Set();
   const whatsappConfig = new Map();
+  const whatsappMessages = new Map();
 
   function ensureCollections(userId) {
     if (!captures.has(userId)) {
@@ -164,6 +165,10 @@ export function createMockDataStore() {
 
     if (!rejections.has(userId)) {
       rejections.set(userId, []);
+    }
+
+    if (!whatsappMessages.has(userId)) {
+      whatsappMessages.set(userId, []);
     }
   }
 
@@ -255,8 +260,21 @@ export function createMockDataStore() {
       };
     },
 
-    async getWhatsappMessageCount() {
-      return 0;
+    async getWhatsappMessageCount(userId) {
+      ensureCollections(userId);
+      return whatsappMessages.get(userId).length;
+    },
+
+    async saveWhatsappMessage(userId, payload) {
+      ensureCollections(userId);
+      const current = whatsappMessages.get(userId);
+      const messageId = payload?.messageId || null;
+      if (messageId && current.some((item) => item.messageId === messageId)) {
+        return;
+      }
+
+      current.push({ ...payload, messageId });
+      whatsappMessages.set(userId, current);
     },
 
 
@@ -362,6 +380,35 @@ export function createMockDataStore() {
 
       groups.set(userId, merged);
       return merged;
+    },
+
+    async isActiveGroupByJidOrName(userId, { jid, groupName } = {}) {
+      const current = groups.get(userId) || [];
+      const normalizedJid = String(jid || '').trim().toLowerCase();
+      const normalizedGroupName = String(groupName || '').trim().toLowerCase();
+
+      if (!normalizedJid && !normalizedGroupName) {
+        return false;
+      }
+
+      return current.some((group) => {
+        if (!group || !group.active) {
+          return false;
+        }
+
+        const groupId = String(group.id || '').trim().toLowerCase();
+        const name = String(group.name || '').trim().toLowerCase();
+
+        if (normalizedJid && groupId === normalizedJid) {
+          return true;
+        }
+
+        if (normalizedGroupName && name === normalizedGroupName) {
+          return true;
+        }
+
+        return false;
+      });
     },
 
     async clearHistory(userId) {

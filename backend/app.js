@@ -328,6 +328,26 @@ export function createApp(options = {}) {
       return res.json({ ok: true, processed: false });
     }
 
+    if (normalized.isGroup) {
+      const isGroupActive = await dataStore.isActiveGroupByJidOrName(userId, {
+        jid: normalized.jid,
+        groupName: normalized.groupName || normalized.senderName,
+      });
+
+      if (!isGroupActive) {
+        console.info('[whatsapp_webhook] dropped_inactive_group_message', {
+          userId,
+          hasJid: Boolean(normalized.jid),
+          hasGroupName: Boolean(normalized.groupName || normalized.senderName),
+          messageId: normalized.messageId || null,
+          eventType: String(req.body?.event || ''),
+          timestamp: normalized.timestamp,
+        });
+
+        return res.json({ ok: true, processed: false, reason: 'inactive_group' });
+      }
+    }
+
     const offerFound = isShiftOffer(normalized.text);
     const offer = offerFound
       ? parseShiftOffer(normalized.text, {
