@@ -94,7 +94,12 @@ async function resolveSession(req, res, { authService, config }) {
   const accessToken = req.cookies?.[COOKIE_NAMES.accessToken];
   const refreshToken = req.cookies?.[COOKIE_NAMES.refreshToken];
 
-  if (!accessToken && !refreshToken) {
+  const bearerToken = (() => {
+    const h = req.headers.authorization;
+    return h?.startsWith('Bearer ') ? h.slice(7) : null;
+  })();
+
+  if (!accessToken && !refreshToken && !bearerToken) {
     throw createHttpError(401, 'UNAUTHORIZED', 'Sessão não encontrada.');
   }
 
@@ -120,6 +125,14 @@ async function resolveSession(req, res, { authService, config }) {
     user = refreshed.user;
     session = refreshed.session;
     setAuthCookies(res, session, config);
+  }
+
+  // No cookie session: accept Supabase bearer token from Authorization header.
+  // Supports cross-origin deployments (e.g. GitHub Pages → Render) where
+  // HttpOnly cookies cannot be shared across origins.
+  if (!user && bearerToken) {
+    user = await authService.getUser(bearerToken);
+    session = { access_token: bearerToken };
   }
 
   if (!user || !session) {

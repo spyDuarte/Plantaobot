@@ -108,6 +108,14 @@ export function csrfProtection(req, _res, next) {
     return;
   }
 
+  // Bearer token requests are inherently CSRF-safe: browsers cannot automatically
+  // attach Authorization headers in cross-site requests, so no cookie-based
+  // CSRF token is required when the client authenticates via a bearer token.
+  if (req.headers.authorization?.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
   const csrfCookie = req.cookies?.[COOKIE_NAMES.csrfToken];
   const csrfHeader = req.get('x-csrf-token');
 
