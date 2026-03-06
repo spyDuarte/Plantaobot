@@ -3,6 +3,7 @@ import { C } from "../constants/colors.js";
 import { fmt } from "../utils/index.js";
 import { Badge, Button, Card, Input } from "./ui/index.jsx";
 import { apiRequest } from "../services/apiClient.js";
+import { getAccessToken } from "../services/authApi.js";
 
 function sanitizePrompt(value) {
   return value.replace(/\s+/g, " ").trim().slice(0, 500);
@@ -53,8 +54,10 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
       "Responda em portugues do Brasil, direto, com no maximo 3 paragrafos e foco pratico.";
 
     try {
+      const token = await getAccessToken();
       const data = await apiRequest("/chat", {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: {
           system,
           messages: history.map((message) => ({ role: message.role, content: message.content })),

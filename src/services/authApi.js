@@ -361,3 +361,16 @@ export function bootstrapImport(body) {
 
   return bootstrapImportWithSupabase(body);
 }
+
+export async function getAccessToken() {
+  if (AUTH_PROVIDER === 'bff') {
+    // BFF mode uses HttpOnly cookies — no bearer token needed.
+    return null;
+  }
+
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  const { data } = await client.auth.getSession();
+  return data?.session?.access_token || null;
+}
