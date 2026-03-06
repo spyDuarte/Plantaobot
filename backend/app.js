@@ -24,6 +24,11 @@ import {
 } from './validation.js';
 import { createSupabaseAuthService } from './services/supabaseAuthService.js';
 import { createSupabaseDataStore } from './services/supabaseDataStore.js';
+import {
+  isShiftOffer,
+  normalizeIncomingWebhook,
+  parseShiftOffer,
+} from './services/whatsappParser.js';
 
 function defaultConfig() {
   const nodeEnv = process.env.NODE_ENV || 'development';
@@ -263,6 +268,74 @@ export function createApp(options = {}) {
 
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser(config.cookieSecret || undefined));
+
+  // ─── WhatsApp Webhook (CSRF-exempt: authenticated by per-user webhook token) ───
+
+  // GET /api/whatsapp/webhook/:userId — WhatsApp Business Cloud API hub verification
+  app.get('/api/whatsapp/webhook/:userId', asyncRoute(async (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode === 'subscribe' && token && challenge) {
+      const userId = String(req.params.userId);
+      const valid = await dataStore.validateWebhookToken(userId, token);
+      if (valid) {
+        return res.status(200).send(challenge);
+      }
+    }
+
+    res.status(403).json({ error: 'FORBIDDEN', message: 'Token de verificação inválido.' });
+  }));
+
+  // POST /api/whatsapp/webhook/:userId — incoming messages from Evolution API or WhatsApp Cloud
+  app.post('/api/whatsapp/webhook/:userId', asyncRoute(async (req, res) => {
+    const userId = String(req.params.userId);
+    const token =
+      req.query.token ||
+      req.headers['x-webhook-secret'] ||
+      req.headers['x-hub-signature-256']?.replace('sha256=', '') ||
+      null;
+
+    if (!token) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token não fornecido.' });
+    }
+
+    const valid = await dataStore.validateWebhookToken(userId, token);
+    if (!valid) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token inválido.' });
+    }
+
+    const normalized = normalizeIncomingWebhook(req.body);
+    if (!normalized) {
+      // Acknowledge unrecognized or non-text payloads silently
+      return res.json({ ok: true, processed: false });
+    }
+
+    const offerFound = isShiftOffer(normalized.text);
+    const offer = offerFound
+      ? parseShiftOffer(normalized.text, {
+          groupName: normalized.groupName || normalized.senderName,
+          senderName: normalized.senderName,
+          messageId: normalized.messageId,
+        })
+      : null;
+
+    await dataStore.saveWhatsappMessage(userId, {
+      messageId: normalized.messageId,
+      jid: normalized.jid,
+      groupName: normalized.groupName || normalized.senderName,
+      senderName: normalized.senderName,
+      rawText: normalized.text,
+      isOffer: offerFound,
+      offer,
+      receivedAt: normalized.timestamp,
+    });
+
+    res.json({ ok: true, processed: true, isOffer: offerFound });
+  }));
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   app.use((req, res, next) => {
     ensureCsrfCookie(req, res, config);
@@ -513,6 +586,19 @@ export function createApp(options = {}) {
     const payload = validateEvent(req.body);
     await dataStore.trackEvent(req.auth.user.id, payload);
     res.status(201).json({ ok: true });
+  }));
+
+  // GET /api/whatsapp/config — returns webhook URL token and connection status
+  app.get('/api/whatsapp/config', requireAuth({}, deps), asyncRoute(async (req, res) => {
+    const waConfig = await dataStore.getWhatsappConfig(req.auth.user.id);
+    const messageCount = await dataStore.getWhatsappMessageCount(req.auth.user.id);
+    res.json({ ...waConfig, messageCount });
+  }));
+
+  // POST /api/whatsapp/config/reset-token — rotates the webhook secret token
+  app.post('/api/whatsapp/config/reset-token', requireAuth({}, deps), asyncRoute(async (req, res) => {
+    const result = await dataStore.resetWebhookToken(req.auth.user.id);
+    res.json(result);
   }));
 
   app.post('/api/chat', requireAuth({}, deps), asyncRoute(async (req, res) => {

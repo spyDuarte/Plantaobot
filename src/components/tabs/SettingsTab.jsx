@@ -1,8 +1,10 @@
-﻿import { C } from "../../constants/colors.js";
+﻿import { useState, useEffect, useCallback } from "react";
+import { C } from "../../constants/colors.js";
 import { DAYS, SPECS } from "../../data/mockData.js";
 import { fmt } from "../../utils/index.js";
 import { Badge, Button, Card, PageHeader, Toggle } from "../ui/index.jsx";
 import { S } from "../../styles/index.js";
+import { fetchWhatsappConfig, resetWhatsappToken, buildWebhookUrl } from "../../services/whatsappApi.js";
 
 export default function SettingsTab({
   uiV2,
@@ -17,6 +19,65 @@ export default function SettingsTab({
   onClearHistory,
   onLogout,
 }) {
+  const [waConfig, setWaConfig] = useState(null);
+  const [waLoading, setWaLoading] = useState(true);
+  const [waCopied, setWaCopied] = useState(false);
+  const [waResetting, setWaResetting] = useState(false);
+
+  const loadWaConfig = useCallback(async () => {
+    setWaLoading(true);
+    try {
+      const config = await fetchWhatsappConfig();
+      setWaConfig(config);
+    } catch {
+      setWaConfig(null);
+    } finally {
+      setWaLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWaConfig();
+  }, [loadWaConfig]);
+
+  async function handleCopyWebhook() {
+    if (!waConfig) return;
+    const url = buildWebhookUrl(waConfig.userId, waConfig.webhookToken);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setWaCopied(true);
+      setTimeout(() => setWaCopied(false), 2000);
+    } catch {
+      // ignore copy failure
+    }
+  }
+
+  async function handleResetToken() {
+    if (!window.confirm("Gerar um novo token invalidará o webhook atual. Continuar?")) return;
+    setWaResetting(true);
+    try {
+      const result = await resetWhatsappToken();
+      setWaConfig((prev) => prev ? { ...prev, webhookToken: result.webhookToken } : prev);
+    } catch {
+      // ignore
+    } finally {
+      setWaResetting(false);
+    }
+  }
+
+  const webhookUrl = waConfig ? buildWebhookUrl(waConfig.userId, waConfig.webhookToken) : "";
+
   return (
     <div style={{ animation: "fadeUp .25s both" }}>
       {uiV2 ? (
@@ -58,6 +119,83 @@ export default function SettingsTab({
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 9, fontSize: 12, color: C.text2, fontWeight: 700 }}>Integração WhatsApp</div>
+
+        {waLoading ? (
+          <div style={{ fontSize: 12, color: C.text2 }}>Carregando configuração...</div>
+        ) : !waConfig ? (
+          <div style={{ fontSize: 12, color: C.text2 }}>
+            Não foi possível carregar a configuração. Verifique a conexão com o backend.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: waConfig.connected ? C.success : C.text2,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 700, color: waConfig.connected ? C.success : C.text2 }}>
+                {waConfig.connected ? "Conectado" : "Não conectado"}
+              </span>
+              {waConfig.messageCount > 0 && (
+                <Badge tone="info">{waConfig.messageCount} mensagens recebidas</Badge>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: 11, color: C.text2, marginBottom: 4 }}>
+                Configure seu bridge WhatsApp (Evolution API, WPPConnect ou Cloud API) com esta URL:
+              </div>
+              <div
+                style={{
+                  background: C.surface2,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 8,
+                  padding: "7px 10px",
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                  wordBreak: "break-all",
+                  color: C.text1,
+                  marginBottom: 8,
+                }}
+              >
+                {webhookUrl || "Carregando..."}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button type="button" variant="primary" onClick={handleCopyWebhook} disabled={!webhookUrl}>
+                  {waCopied ? "Copiado!" : "Copiar URL"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={handleResetToken} disabled={waResetting}>
+                  {waResetting ? "Gerando..." : "Novo token"}
+                </Button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: "#fffbeb",
+                border: "1px solid #fde68a",
+                borderRadius: 8,
+                padding: "8px 10px",
+                fontSize: 11,
+                color: "#92400e",
+              }}
+            >
+              <strong>Como configurar:</strong> Cole a URL acima nas configurações de webhook do seu bridge
+              WhatsApp. Compatível com Evolution API, WPPConnect e WhatsApp Business Cloud API. Mensagens
+              contendo palavras-chave de plantão (ex.: &quot;plantão disponível&quot;, &quot;valor R$&quot;)
+              serão detectadas automaticamente e aparecerão no Feed.
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card style={{ marginBottom: 10 }}>

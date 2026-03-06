@@ -209,11 +209,182 @@ export function createSupabaseDataStore(config) {
       assertNoError(error, 'Failed to stop monitor session.');
     },
 
-    async fetchFeed(_userId, { cursor }) {
+    async fetchFeed(userId, { cursor }) {
+      let query = client
+        .from('whatsapp_messages')
+        .select('id, message_id, group_name, sender_name, raw_text, is_offer, offer, received_at')
+        .eq('user_id', userId)
+        .order('received_at', { ascending: true })
+        .limit(50);
+
+      if (cursor) {
+        query = query.gt('received_at', cursor);
+      }
+
+      const { data, error } = await query;
+      assertNoError(error, 'Failed to fetch WhatsApp feed.');
+
+      const rows = data || [];
+
+      const items = rows.map((row) => {
+        const ts = new Date(row.received_at).toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        if (row.is_offer && row.offer) {
+          return {
+            ...row.offer,
+            id: row.offer.id || row.id,
+            group: row.offer.group || row.group_name || 'WhatsApp',
+            sender: row.offer.sender || row.sender_name || 'Grupo',
+            av: row.offer.av || (row.sender_name || 'W').charAt(0).toUpperCase(),
+            ts,
+            isOffer: true,
+            state: 'done',
+          };
+        }
+
+        return {
+          id: row.id,
+          group: row.group_name || 'WhatsApp',
+          sender: row.sender_name || 'Desconhecido',
+          av: (row.sender_name || 'W').charAt(0).toUpperCase(),
+          rawMsg: row.raw_text,
+          ts,
+          isOffer: false,
+          state: 'done',
+        };
+      });
+
+      const nextCursor =
+        rows.length > 0 ? rows[rows.length - 1].received_at : cursor || nowIso();
+
+      return { items, nextCursor };
+    },
+
+    async getWhatsappConfig(userId) {
+      const { data, error } = await client
+        .from('whatsapp_config')
+        .select('user_id, webhook_token, instance_id, phone_number, connected, connected_at')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      assertNoError(error, 'Failed to fetch WhatsApp config.');
+
+      if (!data) {
+        return this.ensureWhatsappConfig(userId);
+      }
+
       return {
-        items: [],
-        nextCursor: cursor || nowIso(),
+        userId: data.user_id,
+        webhookToken: data.webhook_token,
+        instanceId: data.instance_id || null,
+        phoneNumber: data.phone_number || null,
+        connected: Boolean(data.connected),
+        connectedAt: data.connected_at || null,
       };
+    },
+
+    async ensureWhatsappConfig(userId) {
+      const token = crypto.randomUUID();
+
+      const { data, error } = await client
+        .from('whatsapp_config')
+        .upsert(
+          {
+            user_id: userId,
+            webhook_token: token,
+            updated_at: nowIso(),
+          },
+          { onConflict: 'user_id', ignoreDuplicates: true },
+        )
+        .select('user_id, webhook_token, instance_id, phone_number, connected, connected_at')
+        .maybeSingle();
+
+      assertNoError(error, 'Failed to create WhatsApp config.');
+
+      if (data) {
+        return {
+          userId: data.user_id,
+          webhookToken: data.webhook_token,
+          instanceId: data.instance_id || null,
+          phoneNumber: data.phone_number || null,
+          connected: Boolean(data.connected),
+          connectedAt: data.connected_at || null,
+        };
+      }
+
+      // Row already existed; fetch it
+      return this.getWhatsappConfig(userId);
+    },
+
+    async validateWebhookToken(userId, token) {
+      if (!userId || !token) {
+        return false;
+      }
+
+      const { data, error } = await client
+        .from('whatsapp_config')
+        .select('webhook_token')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return false;
+      }
+
+      return data.webhook_token === token;
+    },
+
+    async resetWebhookToken(userId) {
+      const newToken = crypto.randomUUID();
+
+      const { error } = await client
+        .from('whatsapp_config')
+        .upsert(
+          {
+            user_id: userId,
+            webhook_token: newToken,
+            updated_at: nowIso(),
+          },
+          { onConflict: 'user_id' },
+        );
+
+      assertNoError(error, 'Failed to reset webhook token.');
+
+      return { webhookToken: newToken };
+    },
+
+    async saveWhatsappMessage(userId, { messageId, jid, groupName, senderName, rawText, isOffer, offer, receivedAt }) {
+      const row = {
+        user_id: userId,
+        message_id: messageId || null,
+        jid: jid || null,
+        group_name: groupName || null,
+        sender_name: senderName || null,
+        raw_text: String(rawText).slice(0, 4000),
+        is_offer: Boolean(isOffer),
+        offer: offer || null,
+        received_at: receivedAt || nowIso(),
+      };
+
+      const { error } = await client
+        .from('whatsapp_messages')
+        .upsert(row, { onConflict: 'user_id,message_id', ignoreDuplicates: true });
+
+      assertNoError(error, 'Failed to persist WhatsApp message.');
+    },
+
+    async getWhatsappMessageCount(userId) {
+      const { count, error } = await client
+        .from('whatsapp_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      assertNoError(error, 'Failed to count WhatsApp messages.');
+
+      return count || 0;
     },
 
     async listCaptures(userId) {
