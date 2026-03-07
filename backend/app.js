@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cookieParser from 'cookie-parser';
 import { createHttpError, isHttpError, toErrorPayload } from './errors.js';
 import {
@@ -541,6 +541,12 @@ export function createApp(options = {}) {
 
   app.post('/api/monitor/start', requireAuth({}, deps), asyncRoute(async (req, res) => {
     const payload = validateMonitorStart(req.body);
+    const waStatus = await dataStore.getWhatsappStatus(req.auth.user.id);
+
+    if (!waStatus?.connected) {
+      throw createHttpError(409, 'WHATSAPP_NOT_CONNECTED', 'Conecte o WhatsApp antes de iniciar o monitoramento.');
+    }
+
     const result = await dataStore.startMonitoring(req.auth.user.id, payload);
     res.json({ sessionId: result.sessionId, active: true });
   }));
@@ -641,8 +647,30 @@ export function createApp(options = {}) {
   }));
 
   app.get('/api/whatsapp/status', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const status = await dataStore.getWhatsappStatus(req.auth.user.id);
-    res.json(status);
+    const userId = req.auth.user.id;
+    const refresh = String(req.query.refresh || '').toLowerCase() === '1' || String(req.query.refresh || '').toLowerCase() === 'true';
+
+    const status = await dataStore.getWhatsappStatus(userId);
+
+    if (!refresh || !whatsappProvider || !status.instanceId) {
+      res.json(status);
+      return;
+    }
+
+    try {
+      const live = await whatsappProvider.getInstanceConnectionStatus({ instanceId: status.instanceId });
+      await dataStore.saveWhatsappStatusTransition(userId, {
+        connected: Boolean(live.connected),
+        instanceId: live.instanceId || status.instanceId,
+        phoneNumber: live.phoneNumber || status.phoneNumber || null,
+      });
+
+      const nextStatus = await dataStore.getWhatsappStatus(userId);
+      res.json(nextStatus);
+    } catch {
+      // Fallback to persisted status to avoid UI hard-failure when provider is transiently unavailable.
+      res.json(status);
+    }
   }));
 
   // POST /api/whatsapp/config/reset-token — rotates the webhook secret token

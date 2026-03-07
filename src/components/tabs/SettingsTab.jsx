@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { C } from "../../constants/colors.js";
 import { DAYS, SPECS } from "../../data/mockData.js";
 import { fmt } from "../../utils/index.js";
@@ -64,19 +64,25 @@ export default function SettingsTab({
 
   const refreshWaStatus = useCallback(async () => {
     try {
-      const status = await fetchWhatsappStatus();
+      const status = await fetchWhatsappStatus({ refresh: true });
       setWaConfig((previous) => {
         if (!previous) {
           return previous;
         }
 
-        return {
+        const next = {
           ...previous,
           connected: Boolean(status.connected),
           connectedAt: status.connectedAt || null,
           instanceId: status.instanceId || previous.instanceId || null,
           phoneNumber: status.phoneNumber || previous.phoneNumber || null,
         };
+
+        if (next.connected) {
+          setWaQrCode("");
+        }
+
+        return next;
       });
     } catch {
       // ignore polling errors to avoid UI flicker
