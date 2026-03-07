@@ -172,7 +172,7 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     } catch (error) {
       toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
     }
-  }, [captureOffer, monitorSessionIdRef, registerCapture, toast]);
+  }, [monitorSessionIdRef, registerCapture, toast]);
 
   const rejectPending = useCallback(async (shift) => {
     try {
@@ -187,7 +187,7 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     } catch (error) {
       toast("Falha ao rejeitar", error?.message || "Não foi possível rejeitar este plantão.", "error", "manual");
     }
-  }, [monitorSessionIdRef, rejectOffer, toast]);
+  }, [monitorSessionIdRef, toast]);
 
   const loadInitialShifts = useCallback(async () => {
     try {
@@ -224,7 +224,7 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     } catch (error) {
       toast("Falha ao limpar", error?.message || "Não foi possível limpar o histórico no backend.", "error", "manual");
     }
-  }, [clearHistory, setCaptured, toast]);
+  }, [setCaptured, toast]);
 
   const resetProcessQueue = useCallback(() => {
     setPending([]);

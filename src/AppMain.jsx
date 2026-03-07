@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { C } from "./constants/colors.js";
 import { MONTHLY, GROUPS } from "./data/mockData.js";
 import { fmt } from "./utils/index.js";
@@ -46,6 +46,7 @@ import {
   captureOffer,
 } from "./services/monitoringApi.js";
 import { trackGrowthEvent } from "./services/growthApi.js";
+import { fetchWhatsappStatus } from "./services/whatsappApi.js";
 import { useMonitoring } from "./hooks/useMonitoring.js";
 import { useShifts } from "./hooks/useShifts.js";
 
@@ -450,15 +451,33 @@ export default function AppMain({ onLogout = null }) {
   }, [groups, toast]);
 
   const startBot = useCallback(async () => {
+    try {
+      const whatsappStatus = await fetchWhatsappStatus();
+      if (!whatsappStatus?.connected) {
+        toast(
+          "Conecte o WhatsApp",
+          "Conecte seu WhatsApp em Configurações para iniciar o monitoramento em tempo real.",
+          "warning",
+          "system",
+        );
+        setTab("settings");
+        return;
+      }
+    } catch {
+      // If status endpoint is unavailable, keep previous start behavior.
+    }
+
     resetProcessQueue();
     setTyping(null);
     await startMonitoringHook();
-  }, [resetProcessQueue, startMonitoringHook]);
+  }, [resetProcessQueue, setTab, startMonitoringHook, toast]);
 
   const stopBot = useCallback(async () => {
     setTyping(null);
     await stopMonitoringHook();
   }, [stopMonitoringHook]);
+
+  const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
 
   const exportCSV = useCallback(() => {
     const header = [
@@ -590,13 +609,12 @@ export default function AppMain({ onLogout = null }) {
       toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
       throw error;
     }
-  }, [captured, captureOffer, monitorSessionIdRef, registerCapture, toast]);
+  }, [captured, monitorSessionIdRef, registerCapture, toast]);
 
   const handleClearHistory = useCallback(async () => {
     await clearAllHistory();
   }, [clearAllHistory]);
 
-  const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
   const actG = useMemo(() => groups.filter((group) => group.active), [groups]);
   const projM = useMemo(() => (prefs.minVal <= 2000 ? 18400 : prefs.minVal <= 3000 ? 14200 : 9800), [prefs.minVal]);
 
@@ -940,7 +958,6 @@ export default function AppMain({ onLogout = null }) {
     </>
   );
 }
-
 
 
 
