@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { C } from "./constants/colors.js";
 import { MONTHLY, GROUPS } from "./data/mockData.js";
 import { fmt } from "./utils/index.js";
@@ -592,7 +592,7 @@ export default function AppMain({ onLogout = null }) {
       toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
       throw error;
     }
-  }, [captured, captureOffer, monitorSessionIdRef, registerCapture, toast]);
+  }, [captured, monitorSessionIdRef, registerCapture, toast]);
 
   const handleClearHistory = useCallback(async () => {
     await clearAllHistory();
