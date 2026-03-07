@@ -43,31 +43,31 @@ const HOSPITAL_PATTERNS = [
 ];
 
 // Specialty keyword mapping (Brazilian medical specialties)
-const SPECIALTY_MAP = {
-  'cl[ií]nica\s+geral': 'Clínica Geral',
-  'cl[ií]nica': 'Clínica Geral',
-  'emerg[eê]ncia': 'Emergência',
-  'pronto.socorro': 'Emergência',
-  'ps\b': 'Emergência',
-  'pediatria': 'Pediatria',
-  'pediatr': 'Pediatria',
-  '\buti\b': 'UTI',
-  'terapia\s+intensiva': 'UTI',
-  'psiquiatria': 'Psiquiatria',
-  'psiquiatr': 'Psiquiatria',
-  'cardiologia': 'Cardiologia',
-  'cardio\b': 'Cardiologia',
-  'ortopedia': 'Ortopedia',
-  'ortoped': 'Ortopedia',
-  'ginecologia': 'Ginecologia',
-  'obstet': 'Obstetrícia',
-  'neurologia': 'Neurologia',
-  'neuro\b': 'Neurologia',
-  'cirurgia\s+geral': 'Cirurgia Geral',
-  'anestesia': 'Anestesiologia',
-  'dermatologia': 'Dermatologia',
-  'oftalmologia': 'Oftalmologia',
-};
+const SPECIALTY_PATTERNS = [
+  [/cl[ií]nica\s+geral/i, 'Clínica Geral'],
+  [/cl[ií]nica/i, 'Clínica Geral'],
+  [/emerg[eê]ncia/i, 'Emergência'],
+  [/pronto.socorro/i, 'Emergência'],
+  [/ps\b/i, 'Emergência'],
+  [/pediatria/i, 'Pediatria'],
+  [/pediatr/i, 'Pediatria'],
+  [/\buti\b/i, 'UTI'],
+  [/terapia\s+intensiva/i, 'UTI'],
+  [/psiquiatria/i, 'Psiquiatria'],
+  [/psiquiatr/i, 'Psiquiatria'],
+  [/cardiologia/i, 'Cardiologia'],
+  [/cardio\b/i, 'Cardiologia'],
+  [/ortopedia/i, 'Ortopedia'],
+  [/ortoped/i, 'Ortopedia'],
+  [/ginecologia/i, 'Ginecologia'],
+  [/obstet/i, 'Obstetrícia'],
+  [/neurologia/i, 'Neurologia'],
+  [/neuro\b/i, 'Neurologia'],
+  [/cirurgia\s+geral/i, 'Cirurgia Geral'],
+  [/anestesia/i, 'Anestesiologia'],
+  [/dermatologia/i, 'Dermatologia'],
+  [/oftalmologia/i, 'Oftalmologia'],
+];
 
 // Brazilian weekday labels
 const WEEKDAY_LABELS = {
@@ -118,8 +118,8 @@ function parseHospital(text) {
 
 function parseSpecialty(text) {
   const lower = normalizeForMatching(text);
-  for (const [pattern, label] of Object.entries(SPECIALTY_MAP)) {
-    if (new RegExp(pattern, 'i').test(lower)) {
+  for (const [pattern, label] of SPECIALTY_PATTERNS) {
+    if (pattern.test(lower)) {
       return label;
     }
   }
