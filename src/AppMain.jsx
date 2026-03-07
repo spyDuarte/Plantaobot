@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { C } from "./constants/colors.js";
 import { MONTHLY, GROUPS } from "./data/mockData.js";
-import { fmt, nowT, calcScore } from "./utils/index.js";
+import { fmt } from "./utils/index.js";
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { CSS } from "./styles/index.js";
 import {
@@ -39,21 +39,15 @@ import {
   normalizeReferralCode,
 } from "./utils/growthTracking.js";
 import {
-  fetchMonitorStatus,
-  startMonitoring,
-  stopMonitoring,
-  fetchFeed,
-  fetchCapturedOffers,
-  fetchRejectedOffers,
-  captureOffer,
-  rejectOffer,
   fetchPreferences,
   savePreferences,
   fetchGroups,
   saveGroups,
-  clearHistory,
+  captureOffer,
 } from "./services/monitoringApi.js";
 import { trackGrowthEvent } from "./services/growthApi.js";
+import { useMonitoring } from "./hooks/useMonitoring.js";
+import { useShifts } from "./hooks/useShifts.js";
 
 const DEFAULT_PREFS = {
   minVal: 1500,
@@ -134,18 +128,6 @@ function buildMonthlySeries(capturedList) {
   return buckets.map(({ m, v }) => ({ m, v }));
 }
 
-function appendUniqueById(list, item) {
-  if (!item) {
-    return list;
-  }
-
-  if (list.some((entry) => entry.id === item.id)) {
-    return list;
-  }
-
-  return [...list, item];
-}
-
 function toSlug(input) {
   return String(input || "")
     .normalize("NFD")
@@ -204,12 +186,7 @@ export default function AppMain({ onLogout = null }) {
   const [obStep, setObStep] = useState(0);
   const [tab, setTab] = useState("dashboard");
   const [name, setName] = useLocalStorage("pb_name", "");
-  const [botOn, setBotOn] = useState(false);
-  const [feed, setFeed] = useState([]);
   const [typing, setTyping] = useState(null);
-  const [captured, setCaptured] = useLocalStorage("pb_captured", []);
-  const [rejected, setRejected] = useState([]);
-  const [pending, setPending] = useState([]);
   const [toasts, setToasts] = useState([]);
   const [notifs, setNotifs] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -217,8 +194,6 @@ export default function AppMain({ onLogout = null }) {
   const [modal, setModal] = useState(null);
   const [groups, setGroups] = useLocalStorage("pb_groups", GROUPS);
   const [monthly, setMonthly] = useState(MONTHLY);
-  const [feedError, setFeedError] = useState(null);
-  const [apiLoading, setApiLoading] = useState(false);
   const [prefs, setPrefs] = useLocalStorage("pb_prefs", DEFAULT_PREFS);
   const [growthMetrics, setGrowthMetrics] = useLocalStorage("pb_growth_metrics", DEFAULT_GROWTH_METRICS);
   const [referralCode, setReferralCode] = useLocalStorage("pb_referral_code", "");
@@ -231,10 +206,6 @@ export default function AppMain({ onLogout = null }) {
   const tid = useRef(0);
   const nid = useRef(0);
   const monitorSessionIdRef = useRef(null);
-  const pollTimerRef = useRef(null);
-  const pollCursorRef = useRef(null);
-  const pollInFlightRef = useRef(false);
-  const processedOffersRef = useRef(new Set());
   const prefsSyncReadyRef = useRef(false);
   const groupsSyncReadyRef = useRef(false);
   const inviteSeenRef = useRef(new Set());
@@ -290,196 +261,49 @@ export default function AppMain({ onLogout = null }) {
     }
   }, [setGrowthMetrics]);
 
-  const stopPolling = useCallback(() => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-  }, []);
+  const {
+    feed,
+    captured,
+    rejected,
+    pending,
+    handleFeedItems,
+    acceptPending,
+    rejectPending,
+    loadInitialShifts,
+    clearAllHistory,
+    resetProcessQueue,
+    registerCapture,
+  } = useShifts({
+    prefs,
+    monitorSessionIdRef,
+    toast,
+    addNotif,
+    setConfetti,
+    setTyping,
+  });
 
-  const mergeFeed = useCallback((items) => {
-    setFeed((previous) => {
-      const next = [...previous];
-      const indexById = new Map(next.map((item, index) => [item.id, index]));
-
-      items.forEach((item) => {
-        const existingIndex = indexById.get(item.id);
-        if (existingIndex == null) {
-          next.push(item);
-          indexById.set(item.id, next.length - 1);
-          return;
-        }
-
-        next[existingIndex] = {
-          ...next[existingIndex],
-          ...item,
-        };
-      });
-
-      return next.slice(-250);
-    });
-  }, []);
-
-  const registerCapture = useCallback((shift, { fromAuto = false } = {}) => {
-    const nowIso = new Date().toISOString();
-    const normalizedShift = {
-      ...shift,
-      capturedAt: shift.capturedAt || nowT(),
-      capturedAtISO: shift.capturedAtISO || nowIso,
-    };
-
-    setCaptured((previous) => appendUniqueById(previous, normalizedShift));
-    setPending((previous) => previous.filter((item) => item.id !== shift.id));
-
-    if (fromAuto) {
-      addNotif(
-        "Plantão capturado",
-        `${shift.hospital} - ${shift.date} - R$ ${fmt(shift.val)}`,
-        "success",
-        "bot",
-      );
-      toast("Plantão garantido", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "bot");
-    } else {
-      toast("Plantão aceito", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "manual");
-    }
-
-    if (Number(shift.val) >= 3000) {
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 2500);
-    }
-  }, [addNotif, toast, setCaptured, setPending]);
-
-  const processOffer = useCallback(async (offer) => {
-    if (!offer?.id || processedOffersRef.current.has(offer.id)) {
-      return;
-    }
-
-    processedOffersRef.current.add(offer.id);
-
-    const result = calcScore(offer, prefs);
-    const scoredOffer = {
-      ...offer,
-      state: "done",
-      sc: result.s,
-      ok: result.s >= 60,
-    };
-
-    mergeFeed([scoredOffer]);
-
-    if (prefs.auto) {
-      if (scoredOffer.ok) {
-        try {
-          const persisted = await captureOffer(scoredOffer, {
-            sessionId: monitorSessionIdRef.current,
-            source: "auto",
-          });
-          registerCapture({ ...scoredOffer, ...persisted }, { fromAuto: true });
-        } catch (error) {
-          setPending((previous) => appendUniqueById(previous, scoredOffer));
-          toast("Falha na captura", error.message || "Não foi possível capturar o plantão automaticamente.", "warning", "bot");
-        }
-      } else {
-        setRejected((previous) => appendUniqueById(previous, scoredOffer));
-        try {
-          await rejectOffer(scoredOffer, {
-            sessionId: monitorSessionIdRef.current,
-            reason: "score_below_threshold",
-          });
-        } catch {
-          // Rejeição já refletida localmente.
-        }
-      }
-      return;
-    }
-
-    if (scoredOffer.ok) {
-      setPending((previous) => appendUniqueById(previous, scoredOffer));
-    } else {
-      setRejected((previous) => appendUniqueById(previous, scoredOffer));
-      try {
-        await rejectOffer(scoredOffer, {
-          sessionId: monitorSessionIdRef.current,
-          reason: "score_below_threshold",
-        });
-      } catch {
-        // Rejeição já refletida localmente.
-      }
-    }
-  }, [mergeFeed, prefs, registerCapture, toast]);
-
-  const pollFeed = useCallback(async () => {
-    if (!botOn || pollInFlightRef.current) {
-      return;
-    }
-
-    pollInFlightRef.current = true;
-    try {
-      const response = await fetchFeed({
-        cursor: pollCursorRef.current,
-        sessionId: monitorSessionIdRef.current,
-        groupIds: groups.filter((group) => group.active).map((group) => group.id),
-      });
-
-      if (response.cursor) {
-        pollCursorRef.current = response.cursor;
-      }
-
-      if (!response.items.length) {
-        return;
-      }
-
-      const feedItems = response.items.map((item) => {
-        if (!item.isOffer) {
-          return {
-            ...item,
-            state: item.state || "done",
-          };
-        }
-
-        return {
-          ...item,
-          state: item.state || "scanning",
-        };
-      });
-
-      mergeFeed(feedItems);
-
-      const lastItem = feedItems[feedItems.length - 1];
-      setTyping(lastItem.group);
-      setTimeout(() => setTyping(null), 900);
-
-      for (const item of feedItems) {
-        if (item.isOffer) {          await processOffer(item);
-        }
-      }
-    } catch (error) {
-      const message = error?.message || "Falha ao consultar o feed em tempo real.";
-      setFeedError(message);
-      toast("Erro no monitoramento", message, "error", "system");
-    } finally {
-      pollInFlightRef.current = false;
-    }
-  }, [botOn, groups, mergeFeed, processOffer, toast]);
-
-  const startPolling = useCallback(() => {
-    stopPolling();
-    pollFeed();
-    pollTimerRef.current = setInterval(() => {
-      pollFeed();
-    }, POLL_MS);
-  }, [pollFeed, stopPolling]);
+  const {
+    botOn,
+    feedError,
+    apiLoading,
+    startBot: startMonitoringHook,
+    stopBot: stopMonitoringHook,
+    loadInitialStatus,
+    startPolling,
+  } = useMonitoring({
+    groups,
+    prefs,
+    name,
+    monitorSessionIdRef,
+    onFeedItems: handleFeedItems,
+    toast,
+  });
 
   const loadBootData = useCallback(async () => {
-    setApiLoading(true);
-    setFeedError(null);
-
     try {
-      const [monitorStatus, remotePrefs, remoteGroups, remoteCaptured, remoteRejected] = await Promise.all([
-        fetchMonitorStatus(),
+      const [remotePrefs, remoteGroups] = await Promise.all([
         fetchPreferences(),
         fetchGroups(),
-        fetchCapturedOffers(),
-        fetchRejectedOffers(),
       ]);
 
       if (remotePrefs) {
@@ -490,35 +314,23 @@ export default function AppMain({ onLogout = null }) {
         setGroups(remoteGroups);
       }
 
-      if (Array.isArray(remoteCaptured)) {
-        setCaptured(remoteCaptured);
-      }
+      await loadInitialShifts();
+      const status = await loadInitialStatus();
 
-      if (Array.isArray(remoteRejected)) {
-        setRejected(remoteRejected);
-      }
-
-      monitorSessionIdRef.current = monitorStatus.sessionId;
-      setBotOn(Boolean(monitorStatus.active));
-
-      if (monitorStatus.active) {
+      if (status.isBotActive) {
         startPolling();
       }
-    } catch (error) {
-      const message = error?.message || "Não foi possível inicializar os dados reais do monitoramento.";
-      setFeedError(message);
-      toast("API indisponível", message, "warning", "system");
+    } catch {
+      toast("API indisponível", "Não foi possível carregar todas as configurações iniciais.", "warning", "system");
     } finally {
-      setApiLoading(false);
       prefsSyncReadyRef.current = true;
       groupsSyncReadyRef.current = true;
     }
-  }, [setCaptured, setGroups, setPrefs, startPolling, toast]);
+  }, [setGroups, setPrefs, loadInitialShifts, loadInitialStatus, startPolling, toast]);
 
   useEffect(() => {
     loadBootData();
-    return () => stopPolling();
-  }, [loadBootData, stopPolling]);
+  }, [loadBootData]);
 
   useEffect(() => {
     if (feedRef.current) {
@@ -638,68 +450,14 @@ export default function AppMain({ onLogout = null }) {
   }, [groups, toast]);
 
   async function startBot() {
-    setFeedError(null);
-    processedOffersRef.current = new Set();
-    pollCursorRef.current = null;
-    setPending([]);
+    resetProcessQueue();
     setTyping(null);
-
-    try {
-      const response = await startMonitoring({
-        groups,
-        prefs,
-        operatorName: name,
-      });
-
-      monitorSessionIdRef.current = response.sessionId;
-      setBotOn(true);
-      startPolling();
-      toast("Monitoramento iniciado", "Conexão ativa com o backend de ofertas.", "success", "system");
-    } catch (error) {
-      const message = error?.message || "Não foi possível iniciar o monitoramento real.";
-      setFeedError(message);
-      toast("Falha ao iniciar", message, "error", "system");
-    }
+    await startMonitoringHook();
   }
 
   async function stopBot() {
-    stopPolling();
-    setBotOn(false);
     setTyping(null);
-
-    try {
-      await stopMonitoring(monitorSessionIdRef.current);
-      toast("Monitoramento pausado", "Conexão com backend encerrada.", "info", "system");
-    } catch (error) {
-      toast("Falha ao pausar", error?.message || "Não foi possível encerrar o monitoramento remotamente.", "warning", "system");
-    }
-  }
-
-  async function acceptPending(shift) {
-    try {
-      const persisted = await captureOffer(shift, {
-        sessionId: monitorSessionIdRef.current,
-        source: "manual",
-      });
-      registerCapture({ ...shift, ...persisted }, { fromAuto: false });
-    } catch (error) {
-      toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
-    }
-  }
-
-  async function rejectPending(shift) {
-    try {
-      const persisted = await rejectOffer(shift, {
-        sessionId: monitorSessionIdRef.current,
-        reason: "manual_reject",
-      });
-
-      const rejectedShift = persisted || shift;
-      setPending((previous) => previous.filter((item) => item.id !== shift.id));
-      setRejected((previous) => appendUniqueById(previous, rejectedShift));
-    } catch (error) {
-      toast("Falha ao rejeitar", error?.message || "Não foi possível rejeitar este plantão.", "error", "manual");
-    }
+    await stopMonitoringHook();
   }
 
   function exportCSV() {
@@ -834,21 +592,7 @@ export default function AppMain({ onLogout = null }) {
   }
 
   async function handleClearHistory() {
-    if (!window.confirm("Limpar todo o histórico de plantões capturados? Esta ação não pode ser desfeita.")) {
-      return;
-    }
-
-    try {
-      await clearHistory();
-      setCaptured([]);
-      setRejected([]);
-      setPending([]);
-      setFeed([]);
-      processedOffersRef.current = new Set();
-      toast("Histórico limpo", "Dados operacionais removidos com sucesso.", "info", "manual");
-    } catch (error) {
-      toast("Falha ao limpar", error?.message || "Não foi possível limpar o histórico no backend.", "error", "manual");
-    }
+    await clearAllHistory();
   }
 
   const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
@@ -1092,7 +836,6 @@ export default function AppMain({ onLogout = null }) {
                     <Button
                       type="button"
                       onClick={() => {
-                        setFeedError(null);
                         startBot();
                       }}
                     >
