@@ -4,6 +4,9 @@ import { fmt } from "../utils/index.js";
 import { Badge, Button, Card, Input } from "./ui/index.jsx";
 import { apiRequest } from "../services/apiClient.js";
 
+const DATA_PROVIDER = String(import.meta.env.VITE_DATA_PROVIDER || "bff").toLowerCase();
+const ANTHROPIC_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
+
 const PROMPT_MIN = 3;
 const PROMPT_MAX = 500;
 
@@ -60,14 +63,47 @@ export default function AIChat({ prefs, name, captured, rejected, showHeader = t
       "Responda em portugues do Brasil, direto, com no maximo 3 paragrafos e foco pratico.";
 
     try {
-      const data = await apiRequest("/chat", {
-        method: "POST",
-        body: {
-          system,
-          messages: history.map((message) => ({ role: message.role, content: message.content })),
-        },
-      });
-      const reply = data?.reply || "Nao consegui responder no momento.";
+      let reply;
+
+      if (DATA_PROVIDER === "supabase") {
+        if (!ANTHROPIC_KEY) {
+          reply = "IA nao configurada neste ambiente. Defina VITE_ANTHROPIC_API_KEY.";
+        } else {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": ANTHROPIC_KEY,
+              "anthropic-version": "2023-06-01",
+              "anthropic-dangerous-direct-browser-access": "true",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "claude-haiku-4-5-20251001",
+              max_tokens: 512,
+              system,
+              messages: history.map((message) => ({ role: message.role, content: message.content })),
+            }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData?.error?.message || `Anthropic error ${res.status}`);
+          }
+
+          const resData = await res.json();
+          reply = resData?.content?.[0]?.text || "Nao consegui responder no momento.";
+        }
+      } else {
+        const data = await apiRequest("/chat", {
+          method: "POST",
+          body: {
+            system,
+            messages: history.map((message) => ({ role: message.role, content: message.content })),
+          },
+        });
+        reply = data?.reply || "Nao consegui responder no momento.";
+      }
+
       setMessages((previous) => [...previous, { role: "assistant", content: reply }]);
     } catch (error) {
       const msg =

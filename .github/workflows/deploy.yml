@@ -46,8 +46,9 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_PATH: ${{ env.VITE_BASE_PATH }}
-          # Supabase client-side auth
+          # Supabase client-side auth + data
           VITE_AUTH_PROVIDER: supabase
+          VITE_DATA_PROVIDER: supabase
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           # Optional override for email redirect links
