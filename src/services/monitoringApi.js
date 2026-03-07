@@ -1,6 +1,6 @@
 import { apiRequest, apiRequestOrNull } from "./apiClient.js";
 
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "S·b"];
+const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "S√°b"];
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -63,15 +63,15 @@ function normalizeShift(raw, { isOffer = true } = {}) {
 
   return {
     id,
-    group: raw.group ?? raw.groupName ?? "Grupo n„o informado",
+    group: raw.group ?? raw.groupName ?? "Grupo n√£o informado",
     sender,
     av: raw.av ?? raw.avatar ?? (sender.charAt(0).toUpperCase() || "S"),
-    hospital: raw.hospital ?? raw.facility ?? raw.locationName ?? "Unidade n„o informada",
-    spec: raw.spec ?? raw.specialty ?? "ClÌnica Geral",
+    hospital: raw.hospital ?? raw.facility ?? raw.locationName ?? "Unidade n√£o informada",
+    spec: raw.spec ?? raw.specialty ?? "Cl√≠nica Geral",
     val: Number(raw.val ?? raw.value ?? raw.price ?? 0),
     date: raw.date ?? raw.dateLabel ?? buildDateLabel(raw.startAt ?? raw.datetime),
     hours: raw.hours ?? buildHourLabel(raw.startAt, raw.endAt, raw.durationHours),
-    loc: raw.loc ?? raw.location ?? raw.city ?? "Local n„o informado",
+    loc: raw.loc ?? raw.location ?? raw.city ?? "Local n√£o informado",
     dist: Number(raw.dist ?? raw.distanceKm ?? raw.distance ?? 0),
     rawMsg: raw.rawMsg ?? raw.message ?? raw.description ?? "",
     rivals: raw.rivals ?? [],
@@ -254,7 +254,7 @@ export async function fetchGroups() {
     name: group.name ?? "Grupo",
     members: Number(group.members ?? group.membersCount ?? 0),
     active: Boolean(group.active),
-    emoji: group.emoji ?? "??",
+    emoji: group.emoji ?? "üè•",
   }));
 }
 

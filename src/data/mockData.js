@@ -1,5 +1,5 @@
-export const SPECS = ["ClÌnica Geral", "EmergÍncia", "UTI", "Pediatria", "Cardiologia", "Ortopedia", "Neurologia", "Psiquiatria"];
-export const DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "S·b", "Dom"];
+export const SPECS = ["Cl√≠nica Geral", "Emerg√™ncia", "UTI", "Pediatria", "Cardiologia", "Ortopedia", "Neurologia", "Psiquiatria"];
+export const DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "S√°b", "Dom"];
 
 export const MONTHLY = [
   { m: "Out", v: 9200 },
@@ -11,10 +11,10 @@ export const MONTHLY = [
 ];
 
 export const GROUPS = [
-  { id: 1, name: "Plantıes SP Centro", members: 342, active: true, emoji: "??" },
-  { id: 2, name: "MÈdicos ABC Paulista", members: 218, active: true, emoji: "?????" },
-  { id: 3, name: "Oportunidades MÈdicas SP", members: 567, active: true, emoji: "??" },
-  { id: 4, name: "Vagas UTI Sul SP", members: 89, active: false, emoji: "??" },
+  { id: 1, name: "Plant√µes SP Centro", members: 342, active: true, emoji: "üè•" },
+  { id: 2, name: "M√©dicos ABC Paulista", members: 218, active: true, emoji: "ü©∫" },
+  { id: 3, name: "Oportunidades M√©dicas SP", members: 567, active: true, emoji: "üìã" },
+  { id: 4, name: "Vagas UTI Sul SP", members: 89, active: false, emoji: "‚ù§Ô∏è" },
 ];
 
 export const CAL = [
