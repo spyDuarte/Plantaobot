@@ -1,4 +1,22 @@
 import { apiRequest, apiRequestOrNull } from "./apiClient.js";
+import {
+  fetchCapturedFromSupabase,
+  captureOfferToSupabase,
+  deleteAllCapturesFromSupabase,
+  fetchRejectedFromSupabase,
+  rejectOfferToSupabase,
+  deleteAllRejectionsFromSupabase,
+  fetchPreferencesFromSupabase,
+  savePreferencesToSupabase,
+  fetchGroupsFromSupabase,
+  saveGroupsToSupabase,
+  fetchMonitorStatusFromSupabase,
+  startMonitoringInSupabase,
+  stopMonitoringInSupabase,
+  fetchFeedFromSupabase,
+} from "./supabaseDataService.js";
+
+const DATA_PROVIDER = String(import.meta.env.VITE_DATA_PROVIDER || "bff").toLowerCase();
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -102,6 +120,10 @@ function normalizeList(payload, normalizer) {
 }
 
 export async function fetchMonitorStatus() {
+  if (DATA_PROVIDER === "supabase") {
+    return fetchMonitorStatusFromSupabase();
+  }
+
   const data = await apiRequestOrNull("/monitor/status");
   if (!data) {
     return { active: false, sessionId: null };
@@ -114,6 +136,10 @@ export async function fetchMonitorStatus() {
 }
 
 export async function startMonitoring({ groups, prefs, operatorName }) {
+  if (DATA_PROVIDER === "supabase") {
+    return startMonitoringInSupabase({ groups, prefs, operatorName });
+  }
+
   const payload = {
     groups: groups.map((group) => ({
       id: group.id,
@@ -135,6 +161,10 @@ export async function startMonitoring({ groups, prefs, operatorName }) {
 }
 
 export async function stopMonitoring(sessionId) {
+  if (DATA_PROVIDER === "supabase") {
+    return stopMonitoringInSupabase(sessionId);
+  }
+
   await apiRequest("/monitor/stop", {
     method: "POST",
     body: { sessionId },
@@ -142,6 +172,10 @@ export async function stopMonitoring(sessionId) {
 }
 
 export async function fetchFeed({ cursor, sessionId, groupIds }) {
+  if (DATA_PROVIDER === "supabase") {
+    return fetchFeedFromSupabase({ cursor, sessionId, groupIds });
+  }
+
   const data = await apiRequest("/monitor/feed", {
     query: {
       cursor,
@@ -163,16 +197,28 @@ export async function fetchFeed({ cursor, sessionId, groupIds }) {
 }
 
 export async function fetchCapturedOffers() {
+  if (DATA_PROVIDER === "supabase") {
+    return fetchCapturedFromSupabase();
+  }
+
   const data = await apiRequestOrNull("/captures");
   return normalizeList(data, (item) => normalizeShift(item, { isOffer: true }));
 }
 
 export async function fetchRejectedOffers() {
+  if (DATA_PROVIDER === "supabase") {
+    return fetchRejectedFromSupabase();
+  }
+
   const data = await apiRequestOrNull("/rejections");
   return normalizeList(data, (item) => normalizeShift(item, { isOffer: true }));
 }
 
 export async function captureOffer(shift, { sessionId, source = "manual" } = {}) {
+  if (DATA_PROVIDER === "supabase") {
+    return captureOfferToSupabase(shift, { sessionId, source });
+  }
+
   const data = await apiRequest("/captures", {
     method: "POST",
     body: {
@@ -198,6 +244,10 @@ export async function captureOffer(shift, { sessionId, source = "manual" } = {})
 }
 
 export async function rejectOffer(shift, { sessionId, reason = "not_match" } = {}) {
+  if (DATA_PROVIDER === "supabase") {
+    return rejectOfferToSupabase(shift, { sessionId, reason });
+  }
+
   const data = await apiRequestOrNull("/rejections", {
     method: "POST",
     body: {
@@ -223,6 +273,10 @@ export async function rejectOffer(shift, { sessionId, reason = "not_match" } = {
 }
 
 export async function fetchPreferences() {
+  if (DATA_PROVIDER === "supabase") {
+    return fetchPreferencesFromSupabase();
+  }
+
   const data = await apiRequestOrNull("/preferences");
   if (!data) {
     return null;
@@ -232,6 +286,10 @@ export async function fetchPreferences() {
 }
 
 export async function savePreferences(preferences) {
+  if (DATA_PROVIDER === "supabase") {
+    return savePreferencesToSupabase(preferences);
+  }
+
   await apiRequest("/preferences", {
     method: "PUT",
     body: { preferences },
@@ -239,6 +297,10 @@ export async function savePreferences(preferences) {
 }
 
 export async function fetchGroups() {
+  if (DATA_PROVIDER === "supabase") {
+    return fetchGroupsFromSupabase();
+  }
+
   const data = await apiRequestOrNull("/groups");
   if (!data) {
     return null;
@@ -259,6 +321,10 @@ export async function fetchGroups() {
 }
 
 export async function saveGroups(groups) {
+  if (DATA_PROVIDER === "supabase") {
+    return saveGroupsToSupabase(groups);
+  }
+
   await apiRequest("/groups", {
     method: "PUT",
     body: {
@@ -274,6 +340,11 @@ export async function saveGroups(groups) {
 }
 
 export async function clearHistory() {
+  if (DATA_PROVIDER === "supabase") {
+    await Promise.all([deleteAllCapturesFromSupabase(), deleteAllRejectionsFromSupabase()]);
+    return;
+  }
+
   const result = await apiRequestOrNull("/history", {
     method: "DELETE",
   });
