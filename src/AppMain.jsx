@@ -46,6 +46,7 @@ import {
   captureOffer,
 } from "./services/monitoringApi.js";
 import { trackGrowthEvent } from "./services/growthApi.js";
+import { fetchWhatsappStatus } from "./services/whatsappApi.js";
 import { useMonitoring } from "./hooks/useMonitoring.js";
 import { useShifts } from "./hooks/useShifts.js";
 
@@ -450,10 +451,26 @@ export default function AppMain({ onLogout = null }) {
   }, [groups, toast]);
 
   const startBot = useCallback(async () => {
+    try {
+      const whatsappStatus = await fetchWhatsappStatus();
+      if (!whatsappStatus?.connected) {
+        toast(
+          "Conecte o WhatsApp",
+          "Conecte seu WhatsApp em Configurações para iniciar o monitoramento em tempo real.",
+          "warning",
+          "system",
+        );
+        setTab("settings");
+        return;
+      }
+    } catch {
+      // If status endpoint is unavailable, keep previous start behavior.
+    }
+
     resetProcessQueue();
     setTyping(null);
     await startMonitoringHook();
-  }, [resetProcessQueue, startMonitoringHook]);
+  }, [resetProcessQueue, setTab, startMonitoringHook, toast]);
 
   const stopBot = useCallback(async () => {
     setTyping(null);
