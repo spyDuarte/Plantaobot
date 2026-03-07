@@ -460,6 +460,8 @@ export default function AppMain({ onLogout = null }) {
     await stopMonitoringHook();
   }, [stopMonitoringHook]);
 
+  const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
+
   const exportCSV = useCallback(() => {
     const header = [
       "Hospital",
@@ -596,7 +598,6 @@ export default function AppMain({ onLogout = null }) {
     await clearAllHistory();
   }, [clearAllHistory]);
 
-  const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
   const actG = useMemo(() => groups.filter((group) => group.active), [groups]);
   const projM = useMemo(() => (prefs.minVal <= 2000 ? 18400 : prefs.minVal <= 3000 ? 14200 : 9800), [prefs.minVal]);
 
@@ -940,7 +941,6 @@ export default function AppMain({ onLogout = null }) {
     </>
   );
 }
-
 
 
 
