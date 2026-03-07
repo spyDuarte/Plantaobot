@@ -162,7 +162,7 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     }
   }, [mergeFeed, processOffer, setTyping]);
 
-  const acceptPending = async (shift) => {
+  const acceptPending = useCallback(async (shift) => {
     try {
       const persisted = await captureOffer(shift, {
         sessionId: monitorSessionIdRef.current,
@@ -172,9 +172,9 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     } catch (error) {
       toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
     }
-  };
+  }, [captureOffer, monitorSessionIdRef, registerCapture, toast]);
 
-  const rejectPending = async (shift) => {
+  const rejectPending = useCallback(async (shift) => {
     try {
       const persisted = await rejectOffer(shift, {
         sessionId: monitorSessionIdRef.current,
@@ -187,28 +187,28 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     } catch (error) {
       toast("Falha ao rejeitar", error?.message || "Não foi possível rejeitar este plantão.", "error", "manual");
     }
-  };
+  }, [monitorSessionIdRef, rejectOffer, toast]);
 
-  const loadInitialShifts = async () => {
-      try {
-        const [remoteCaptured, remoteRejected] = await Promise.all([
-          fetchCapturedOffers(),
-          fetchRejectedOffers(),
-        ]);
+  const loadInitialShifts = useCallback(async () => {
+    try {
+      const [remoteCaptured, remoteRejected] = await Promise.all([
+        fetchCapturedOffers(),
+        fetchRejectedOffers(),
+      ]);
 
-        if (Array.isArray(remoteCaptured)) {
-          setCaptured(remoteCaptured);
-        }
-
-        if (Array.isArray(remoteRejected)) {
-          setRejected(remoteRejected);
-        }
-      } catch {
-        // failed to load history, that's ok
+      if (Array.isArray(remoteCaptured)) {
+        setCaptured(remoteCaptured);
       }
-  };
 
-  const clearAllHistory = async () => {
+      if (Array.isArray(remoteRejected)) {
+        setRejected(remoteRejected);
+      }
+    } catch {
+      // failed to load history, that's ok
+    }
+  }, [setCaptured]);
+
+  const clearAllHistory = useCallback(async () => {
     if (!window.confirm("Limpar todo o histórico de plantões capturados? Esta ação não pode ser desfeita.")) {
       return;
     }
@@ -224,12 +224,12 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     } catch (error) {
       toast("Falha ao limpar", error?.message || "Não foi possível limpar o histórico no backend.", "error", "manual");
     }
-  };
+  }, [clearHistory, setCaptured, toast]);
 
-  const resetProcessQueue = () => {
-      setPending([]);
-      processedOffersRef.current = new Set();
-  };
+  const resetProcessQueue = useCallback(() => {
+    setPending([]);
+    processedOffersRef.current = new Set();
+  }, []);
 
   return {
     feed, setFeed,
