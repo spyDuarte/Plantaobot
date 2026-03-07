@@ -34,6 +34,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
     globals: true,
+    env: {
+      // Explicitly enable auth in the test environment so auth gate tests
+      // always run the full flow, regardless of Supabase credentials.
+      VITE_AUTH_ENABLED: 'true',
+    },
   },
 });
 
