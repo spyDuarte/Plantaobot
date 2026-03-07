@@ -70,7 +70,7 @@ export default function FeedTab({ uiV2, botOn, feed, typing, setModal, feedRef, 
                     </div>
 
                     {!message.isOffer ? (
-                      <p style={{ margin: "4px 0 0", fontSize: 12, color: C.text1 }}>{message.text}</p>
+                      <p style={{ margin: "4px 0 0", fontSize: 12, color: C.text1 }}>{message.rawMsg || message.text}</p>
                     ) : null}
                   </div>
                 </div>
