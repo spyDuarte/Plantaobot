@@ -353,6 +353,16 @@ export const CSS = `
   button:active { transform: scale(.98); }
   ::selection { background: #dbe7ff; color: #10243b; }
 
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   @media (max-width: 960px) {
     .pb-shell-grid {
       grid-template-columns: minmax(0, 1fr);

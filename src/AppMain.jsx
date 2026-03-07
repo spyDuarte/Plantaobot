@@ -449,18 +449,18 @@ export default function AppMain({ onLogout = null }) {
     return () => clearTimeout(timer);
   }, [groups, toast]);
 
-  async function startBot() {
+  const startBot = useCallback(async () => {
     resetProcessQueue();
     setTyping(null);
     await startMonitoringHook();
-  }
+  }, [resetProcessQueue, startMonitoringHook]);
 
-  async function stopBot() {
+  const stopBot = useCallback(async () => {
     setTyping(null);
     await stopMonitoringHook();
-  }
+  }, [stopMonitoringHook]);
 
-  function exportCSV() {
+  const exportCSV = useCallback(() => {
     const header = [
       "Hospital",
       "Grupo",
@@ -495,9 +495,9 @@ export default function AppMain({ onLogout = null }) {
     anchor.download = "plantoes_capturados.csv";
     anchor.click();
     URL.revokeObjectURL(url);
-  }
+  }, [captured]);
 
-  async function shareCapturedSummary() {
+  const shareCapturedSummary = useCallback(async () => {
     if (captured.length === 0) {
       toast("Sem capturas", "Capture pelo menos um plantao para compartilhar seu resultado.", "warning", "growth");
       return;
@@ -573,8 +573,9 @@ export default function AppMain({ onLogout = null }) {
     } catch {
       toast("Falha ao compartilhar", "Nao foi possivel abrir o WhatsApp nem copiar a mensagem.", "warning", "growth");
     }
-  }
-  async function acceptFromModal(shift) {
+  }, [captured, name, referralCode, setReferralCode, setLastShareAt, toast, total, trackGrowth]);
+
+  const acceptFromModal = useCallback(async (shift) => {
     if (captured.some((item) => item.id === shift.id)) {
       return;
     }
@@ -589,11 +590,11 @@ export default function AppMain({ onLogout = null }) {
       toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
       throw error;
     }
-  }
+  }, [captured, captureOffer, monitorSessionIdRef, registerCapture, toast]);
 
-  async function handleClearHistory() {
+  const handleClearHistory = useCallback(async () => {
     await clearAllHistory();
-  }
+  }, [clearAllHistory]);
 
   const total = useMemo(() => captured.reduce((sum, shift) => sum + Number(shift.val ?? 0), 0), [captured]);
   const actG = useMemo(() => groups.filter((group) => group.active), [groups]);

@@ -57,7 +57,7 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
     }, POLL_MS);
   }, [pollFeed, stopPolling]);
 
-  const startBot = async () => {
+  const startBot = useCallback(async () => {
     setFeedError(null);
     pollCursorRef.current = null;
 
@@ -77,9 +77,9 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
       setFeedError(message);
       toast("Falha ao iniciar", message, "error", "system");
     }
-  };
+  }, [groups, monitorSessionIdRef, name, prefs, startPolling, toast]);
 
-  const stopBot = async () => {
+  const stopBot = useCallback(async () => {
     stopPolling();
     setBotOn(false);
 
@@ -89,7 +89,7 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
     } catch (error) {
       toast("Falha ao pausar", error?.message || "Não foi possível encerrar o monitoramento remotamente.", "warning", "system");
     }
-  };
+  }, [monitorSessionIdRef, stopPolling, toast]);
 
   const loadInitialStatus = useCallback(async () => {
     try {

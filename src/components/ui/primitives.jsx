@@ -120,8 +120,8 @@ export function Modal({ open, title, children, onClose, footer }) {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <strong>{title}</strong>
-          <button aria-label="Close" onClick={onClose} className="ds-btn ds-btn-secondary" type="button">
-            Close
+          <button aria-label="Fechar" onClick={onClose} className="ds-btn ds-btn-secondary" type="button">
+            Fechar
           </button>
         </div>
         {children}
