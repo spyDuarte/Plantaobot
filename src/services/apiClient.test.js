@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, apiRequest } from './apiClient.js';
 
 function jsonResponse(body, status = 200) {
@@ -36,6 +36,27 @@ describe('apiClient auth/csrf behavior', () => {
     expect(options.credentials).toBe('include');
     expect(options.headers['X-CSRF-Token']).toBe('test-csrf');
     expect(options.headers['Content-Type']).toBe('application/json');
+  });
+
+  it('respects existing lowercase content-type and csrf headers', async () => {
+    document.cookie = 'pb_csrf=test-csrf';
+
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse({ ok: true }));
+
+    await apiRequest('/captures', {
+      method: 'POST',
+      body: { hello: 'world' },
+      headers: {
+        'content-type': 'application/merge-patch+json',
+        'x-csrf-token': 'custom-csrf',
+      },
+    });
+
+    const [, options] = fetchSpy.mock.calls[0];
+    expect(options.headers['content-type']).toBe('application/merge-patch+json');
+    expect(options.headers['x-csrf-token']).toBe('custom-csrf');
+    expect(options.headers['Content-Type']).toBeUndefined();
+    expect(options.headers['X-CSRF-Token']).toBeUndefined();
   });
 
   it('primes csrf token via /auth/me when cookie is missing', async () => {
