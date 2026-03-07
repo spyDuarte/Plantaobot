@@ -6,7 +6,7 @@ describe('utils', () => {
     vi.useRealTimers();
   });
 
-  it('fmt deve formatar número no padrão pt-BR', () => {
+  it('fmt deve formatar nÃºmero no padrÃ£o pt-BR', () => {
     expect(fmt(1234567.89)).toBe('1.234.567,89');
   });
 
@@ -17,19 +17,19 @@ describe('utils', () => {
     expect(nowT()).toMatch(/^\d{2}:\d{2}$/);
   });
 
-  it('calcScore soma pontos e retorna razões quando tudo bate', () => {
+  it('calcScore soma pontos e retorna razÃµes quando tudo bate', () => {
     const shift = {
       val: 1500,
       dist: 8,
       date: 'Seg 20/01',
-      spec: 'clínica médica',
+      spec: 'clÃ­nica mÃ©dica',
     };
 
     const preferences = {
       minVal: 1000,
       maxDist: 10,
       days: ['Seg'],
-      specs: ['clínica médica'],
+      specs: ['clÃ­nica mÃ©dica'],
     };
 
     const { s, r } = calcScore(shift, preferences);
@@ -44,14 +44,14 @@ describe('utils', () => {
       val: 1800,
       dist: 5,
       dateISO: '2025-01-20T07:00:00Z',
-      spec: 'clínica médica',
+      spec: 'clÃ­nica mÃ©dica',
     };
 
     const preferences = {
       minVal: 1000,
       maxDist: 10,
       days: ['Seg'],
-      specs: ['clínica médica'],
+      specs: ['clÃ­nica mÃ©dica'],
     };
 
     const { s } = calcScore(shift, preferences);
@@ -59,7 +59,7 @@ describe('utils', () => {
     expect(s).toBe(100);
   });
 
-  it('calcScore não soma pontos para critérios que falham', () => {
+  it('calcScore nÃ£o soma pontos para critÃ©rios que falham', () => {
     const shift = {
       val: 600,
       dist: 30,
@@ -71,7 +71,7 @@ describe('utils', () => {
       minVal: 1000,
       maxDist: 10,
       days: ['Seg'],
-      specs: ['clínica médica'],
+      specs: ['clÃ­nica mÃ©dica'],
     };
 
     const { s, r } = calcScore(shift, preferences);

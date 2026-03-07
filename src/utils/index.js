@@ -8,7 +8,7 @@ const DAY_MAP = {
   3: "Qua",
   4: "Qui",
   5: "Sex",
-  6: "Sáb",
+  6: "SÃ¡b",
 };
 
 function resolveDayLabel(shift) {
@@ -42,12 +42,12 @@ export function calcScore(shift, p) {
   const dayLabel = resolveDayLabel(shift);
 
   if (shift.val >= p.minVal) { s+=30; r.push({l:"Valor ? R$"+fmt(shift.val), ok:true}); }
-  else r.push({l:"Abaixo do mínimo R$"+fmt(p.minVal), ok:false});
+  else r.push({l:"Abaixo do mÃ­nimo R$"+fmt(p.minVal), ok:false});
 
-  if (shift.dist <= p.maxDist) { s+=30; r.push({l:"Distância ? "+shift.dist+"km", ok:true}); }
+  if (shift.dist <= p.maxDist) { s+=30; r.push({l:"DistÃ¢ncia ? "+shift.dist+"km", ok:true}); }
   else r.push({l:"Muito longe "+shift.dist+"km", ok:false});
 
-  if (p.days.includes(dayLabel)) { s+=20; r.push({l:"Dia disponível ?", ok:true}); }
+  if (p.days.includes(dayLabel)) { s+=20; r.push({l:"Dia disponÃ­vel ?", ok:true}); }
   else r.push({l:"Dia bloqueado ("+(dayLabel || "?")+")", ok:false});
 
   if (p.specs.includes(shift.spec)) { s+=20; r.push({l:"Especialidade ?", ok:true}); }
