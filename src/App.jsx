@@ -22,8 +22,17 @@ import {
   validateSignupForm,
 } from './utils/authValidation.js';
 
-// Auth is enabled by default. Set VITE_AUTH_ENABLED=false in .env to bypass (dev only).
-const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED !== "false";
+// Auth gate logic:
+//   VITE_AUTH_ENABLED=true  → always on (used by tests and explicit opt-in)
+//   VITE_AUTH_ENABLED=false → always off (dev bypass without credentials)
+//   unset + supabase        → on only when VITE_SUPABASE_URL/ANON_KEY are defined
+//   unset + bff             → always on (BFF handles its own session cookie)
+const _authProvider = String(import.meta.env.VITE_AUTH_PROVIDER || 'supabase').toLowerCase();
+const _supabaseReady = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+const AUTH_ENABLED =
+  import.meta.env.VITE_AUTH_ENABLED === 'true' ||
+  (import.meta.env.VITE_AUTH_ENABLED !== 'false' &&
+    (_authProvider === 'bff' || _supabaseReady));
 
 const STATUS = {
   LOADING: 'loading',
