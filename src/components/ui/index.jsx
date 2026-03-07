@@ -26,17 +26,28 @@ export function ScBar({sc,h=4}) {
 }
 
 export function Toggle({on,onChange,label}) {
-  return <button onClick={onChange} role="switch" aria-checked={on} aria-label={label} style={{width:42,height:23,borderRadius:12,background:on?"linear-gradient(135deg,"+C.em+","+C.cy+")":C.bd,border:"none",cursor:"pointer",position:"relative",transition:"all .3s",flexShrink:0,boxShadow:on?"0 0 14px "+C.emA:""}}>
+  return <button onClick={onChange} role="switch" aria-checked={on} aria-label={label} className="ds-btn-focus" style={{width:42,height:23,borderRadius:12,background:on?"linear-gradient(135deg,"+C.em+","+C.cy+")":C.bd,border:"none",cursor:"pointer",position:"relative",transition:"all .3s",flexShrink:0,boxShadow:on?"0 0 14px "+C.emA:""}}>
     <div style={{position:"absolute",top:2.5,left:on?20:2.5,width:18,height:18,borderRadius:"50%",background:"#fff",transition:reducedMotion?"none":"left .3s cubic-bezier(.4,0,.2,1)",boxShadow:"0 1px 6px rgba(0,0,0,.5)"}}/>
   </button>;
 }
 
 export function GlassCard({children,style={},glow=false,onClick,hover=false}) {
   const [hov,setHov]=useState(false);
+
+  if (onClick) {
+    return <button
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      onClick={onClick}
+      className="ds-btn-focus"
+      style={{background:C.glass,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid "+(glow?C.em+"55":(hov&&hover)?C.bdH:C.bd),borderRadius:18,padding:18,position:"relative",overflow:"hidden",boxShadow:glow?"0 0 40px "+C.emA+",0 8px 32px rgba(0,0,0,.5)":"0 4px 24px rgba(0,0,0,.4)",cursor:"pointer",transition:"all .2s",textAlign:"left",width:"100%",...style}}>
+      {glow&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,"+C.em+"88,transparent)"}}/>}
+      {children}
+    </button>;
+  }
+
   return <div
     onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-    onClick={onClick}
-    style={{background:C.glass,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid "+(glow?C.em+"55":(hov&&hover)?C.bdH:C.bd),borderRadius:18,padding:18,position:"relative",overflow:"hidden",boxShadow:glow?"0 0 40px "+C.emA+",0 8px 32px rgba(0,0,0,.5)":"0 4px 24px rgba(0,0,0,.4)",cursor:onClick?"pointer":"default",transition:"all .2s",...style}}>
+    style={{background:C.glass,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:"1px solid "+(glow?C.em+"55":(hov&&hover)?C.bdH:C.bd),borderRadius:18,padding:18,position:"relative",overflow:"hidden",boxShadow:glow?"0 0 40px "+C.emA+",0 8px 32px rgba(0,0,0,.5)":"0 4px 24px rgba(0,0,0,.4)",transition:"all .2s",...style}}>
     {glow&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:"linear-gradient(90deg,transparent,"+C.em+"88,transparent)"}}/>}
     {children}
   </div>;
@@ -86,10 +97,10 @@ export function Confetti({active}) {
 }
 
 export function Toasts({items}) {
-  return <div style={{position:"fixed",top:70,right:14,zIndex:8800,display:"flex",flexDirection:"column",gap:8,pointerEvents:"none",maxWidth:290}}>
+  return <div aria-live="polite" aria-atomic="true" style={{position:"fixed",top:70,right:14,zIndex:8800,display:"flex",flexDirection:"column",gap:8,pointerEvents:"none",maxWidth:290}}>
     {items.map(t=>{
       const col=t.type==="win"?C.em:t.type==="info"?C.cy:C.rd;
-      return <div key={t.id} style={{background:"rgba(7,14,29,0.97)",backdropFilter:"blur(20px)",border:"1px solid "+col+"44",borderRadius:14,padding:"11px 15px",boxShadow:"0 8px 32px rgba(0,0,0,.7),0 0 24px "+col+"18",animation:"toastIn .35s cubic-bezier(.4,0,.2,1)"}}>
+      return <div key={t.id} role="status" style={{background:"rgba(7,14,29,0.97)",backdropFilter:"blur(20px)",border:"1px solid "+col+"44",borderRadius:14,padding:"11px 15px",boxShadow:"0 8px 32px rgba(0,0,0,.7),0 0 24px "+col+"18",animation:"toastIn .35s cubic-bezier(.4,0,.2,1)"}}>
         <div style={{fontSize:12,fontWeight:800,color:col,marginBottom:3}}>{t.title}</div>
         <div style={{fontSize:11,color:C.tx1,lineHeight:1.4}}>{t.body}</div>
       </div>;

@@ -238,7 +238,7 @@ export const CSS = `
     transition: all .2s ease;
   }
 
-  .ds-btn:focus-visible {
+  .ds-btn:focus-visible, .ds-btn-focus:focus-visible {
     outline: 2px solid #7ea4ff;
     outline-offset: 1px;
   }
@@ -333,6 +333,11 @@ export const CSS = `
     height: 6px;
     background: #dce6f3;
     border-radius: 8px;
+  }
+
+  input[type=range]:focus-visible {
+    outline: 2px solid #7ea4ff;
+    outline-offset: 4px;
   }
 
   input[type=range]::-webkit-slider-thumb {
