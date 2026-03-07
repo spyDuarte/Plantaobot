@@ -100,7 +100,7 @@ export default function SettingsTab({
     return () => {
       clearInterval(intervalId);
     };
-  }, [waConfig?.userId, refreshWaStatus]);
+  }, [waConfig, refreshWaStatus]);
 
   async function handleCopyWebhook() {
     if (!waConfig) return;
