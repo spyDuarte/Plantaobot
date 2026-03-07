@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import SettingsTab from './SettingsTab.jsx';
+
+vi.mock('../../services/whatsappApi.js', () => ({
+  fetchWhatsappConfig: vi.fn().mockResolvedValue(null),
+  fetchWhatsappStatus: vi.fn().mockResolvedValue({ connected: false, connectedAt: null, instanceId: null, phoneNumber: null }),
+  resetWhatsappToken: vi.fn(),
+  buildWebhookUrl: vi.fn().mockReturnValue(''),
+  connectWhatsapp: vi.fn(),
+  fetchWhatsappGroups: vi.fn(),
+}));
 
 const baseGroups = [
   { id: 'g1', name: 'Grupo A', members: 120, active: true, emoji: '🏥' },

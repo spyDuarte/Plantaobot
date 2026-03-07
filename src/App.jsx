@@ -22,8 +22,8 @@ import {
   validateSignupForm,
 } from './utils/authValidation.js';
 
-// Set to true when Supabase is configured and auth should be enforced.
-const AUTH_ENABLED = false;
+// Auth is enabled by default. Set VITE_AUTH_ENABLED=false in .env to bypass (dev only).
+const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED !== "false";
 
 const STATUS = {
   LOADING: 'loading',
