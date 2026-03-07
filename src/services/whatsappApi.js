@@ -22,8 +22,9 @@ export async function resetWhatsappToken() {
  * Fetches current WhatsApp connection status.
  * @returns {Promise<{ connected: boolean, connectedAt: string | null, instanceId: string | null, phoneNumber: string | null }>}
  */
-export async function fetchWhatsappStatus() {
-  return apiRequest('/whatsapp/status');
+export async function fetchWhatsappStatus({ refresh = false } = {}) {
+  const suffix = refresh ? '?refresh=1' : '';
+  return apiRequest(`/whatsapp/status${suffix}`);
 }
 /**
  * Starts WhatsApp connection through Evolution API.

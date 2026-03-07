@@ -67,6 +67,54 @@ function toGroupShape(chat) {
   };
 }
 
+
+function normalizeState(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isConnectedState(state) {
+  const normalized = normalizeState(state);
+  return normalized === 'open' || normalized === 'connected' || normalized === 'online';
+}
+
+function toPhoneNumber(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return null;
+  }
+
+  const onlyDigits = raw.replace(/\D+/g, '');
+  return onlyDigits || null;
+}
+
+function toInstanceStatus(payload, instanceId) {
+  const state =
+    payload?.state ||
+    payload?.status ||
+    payload?.instance?.state ||
+    payload?.instance?.status ||
+    payload?.data?.state ||
+    payload?.data?.status ||
+    'unknown';
+
+  const phoneNumber =
+    toPhoneNumber(payload?.number) ||
+    toPhoneNumber(payload?.owner) ||
+    toPhoneNumber(payload?.ownerJid) ||
+    toPhoneNumber(payload?.instance?.number) ||
+    toPhoneNumber(payload?.instance?.owner) ||
+    toPhoneNumber(payload?.instance?.ownerJid) ||
+    toPhoneNumber(payload?.data?.number) ||
+    null;
+
+  return {
+    instanceId,
+    state: normalizeState(state) || 'unknown',
+    connected: isConnectedState(state),
+    phoneNumber,
+  };
+}
+
 function mapEvolutionError(error) {
   if (error?.name === 'AbortError') {
     return createHttpError(504, 'EVOLUTION_TIMEOUT', 'A Evolution API demorou para responder. Tente novamente em instantes.');
@@ -185,6 +233,52 @@ export function createWhatsappProvider(config = {}) {
         qrCode: toQrCode(rawQr),
         state,
       };
+    },
+
+    async getInstanceConnectionStatus({ instanceId }) {
+      const attempts = [
+        async () => {
+          const payload = await requestEvolution(`/instance/connectionState/${instanceId}`, { method: 'GET' });
+          return toInstanceStatus(payload, instanceId);
+        },
+        async () => {
+          const payload = await requestEvolution('/instance/fetchInstances', { method: 'GET' });
+          const instances = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.instances)
+              ? payload.instances
+              : Array.isArray(payload?.data)
+                ? payload.data
+                : [];
+
+          const match = instances.find((item) => {
+            const candidateId = String(item?.instanceName || item?.name || item?.instance?.instanceName || item?.instanceId || '').trim();
+            return candidateId === instanceId;
+          });
+
+          if (!match) {
+            return {
+              instanceId,
+              connected: false,
+              state: 'not_found',
+              phoneNumber: null,
+            };
+          }
+
+          return toInstanceStatus(match, instanceId);
+        },
+      ];
+
+      let lastError = null;
+      for (const attempt of attempts) {
+        try {
+          return await attempt();
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      throw lastError || createHttpError(502, 'EVOLUTION_ERROR', 'Falha ao consultar status da instância WhatsApp.');
     },
 
     async listInstanceGroups({ instanceId }) {

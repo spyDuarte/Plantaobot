@@ -1,4 +1,4 @@
-﻿/* @vitest-environment node */
+/* @vitest-environment node */
 
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
@@ -249,6 +249,45 @@ describe('backend auth integration', () => {
     expect(second.body.alreadyImported).toBe(true);
   });
 
+
+  it('blocks monitor start when WhatsApp is not connected', async () => {
+    const { agent, csrf } = await setup();
+
+    await agent
+      .post('/api/auth/signup')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'Dra. Bia',
+        email: 'bia@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/auth/confirm')
+      .set('X-CSRF-Token', csrf)
+      .send({ token_hash: 'bia@example.com', type: 'signup' });
+
+    await agent
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        email: 'bia@example.com',
+        password: 'SenhaForte123',
+      });
+
+    const response = await agent
+      .post('/api/monitor/start')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        groups: [{ id: 'g1', name: 'Grupo 1', active: true, members: 10, emoji: '🏥' }],
+        preferences: { minVal: 1500, maxDist: 20 },
+        operatorName: 'Dra. Bia',
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('WHATSAPP_NOT_CONNECTED');
+  });
+
   it('connects WhatsApp and returns QR payload', async () => {
     const whatsappProvider = {
       async createInstanceForUser() {
@@ -298,6 +337,69 @@ describe('backend auth integration', () => {
     expect(response.body.state).toBe('connecting');
     expect(response.body.connected).toBe(false);
   });
+
+  it('refreshes WhatsApp status from provider when requested', async () => {
+    const whatsappProvider = {
+      async createInstanceForUser() {
+        return { instanceId: 'user-user-1' };
+      },
+      async getInstanceQr() {
+        return { qrCode: null, state: 'connecting' };
+      },
+      async getInstanceConnectionStatus() {
+        return {
+          instanceId: 'user-user-1',
+          connected: true,
+          state: 'open',
+          phoneNumber: '5511912345678',
+        };
+      },
+    };
+
+    const { agent, csrf } = await setup({
+      evolutionApiUrl: 'http://localhost:8081',
+      evolutionApiKey: 'test-key',
+      whatsappProvider,
+    });
+
+    await agent
+      .post('/api/auth/signup')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        name: 'Dr. Leo',
+        email: 'leo@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/auth/confirm')
+      .set('X-CSRF-Token', csrf)
+      .send({ token_hash: 'leo@example.com', type: 'signup' });
+
+    await agent
+      .post('/api/auth/login')
+      .set('X-CSRF-Token', csrf)
+      .send({
+        email: 'leo@example.com',
+        password: 'SenhaForte123',
+      });
+
+    await agent
+      .post('/api/whatsapp/connect')
+      .set('X-CSRF-Token', csrf)
+      .send({});
+
+    const liveStatus = await agent.get('/api/whatsapp/status?refresh=1');
+    expect(liveStatus.status).toBe(200);
+    expect(liveStatus.body.connected).toBe(true);
+    expect(liveStatus.body.phoneNumber).toBe('5511912345678');
+
+    const persistedStatus = await agent.get('/api/whatsapp/status');
+    expect(persistedStatus.status).toBe(200);
+    expect(persistedStatus.body.connected).toBe(true);
+    expect(persistedStatus.body.phoneNumber).toBe('5511912345678');
+  });
+
   it('returns authenticated WhatsApp status and persists webhook status transitions', async () => {
     const { agent, csrf } = await setup();
 
