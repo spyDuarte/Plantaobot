@@ -113,11 +113,13 @@ function buildHeaders({ method, headers, body, csrfToken }) {
     ...(headers || {}),
   };
 
-  if (shouldAttachJsonBody(body) && !('Content-Type' in next)) {
+  const lowerCaseHeaderNames = new Set(Object.keys(next).map((key) => key.toLowerCase()));
+
+  if (shouldAttachJsonBody(body) && !lowerCaseHeaderNames.has('content-type')) {
     next['Content-Type'] = 'application/json';
   }
 
-  if (csrfToken && MUTATING_METHODS.has(method) && !('X-CSRF-Token' in next)) {
+  if (csrfToken && MUTATING_METHODS.has(method) && !lowerCaseHeaderNames.has('x-csrf-token')) {
     next['X-CSRF-Token'] = csrfToken;
   }
 
