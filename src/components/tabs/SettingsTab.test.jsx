@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import SettingsTab from './SettingsTab.jsx';
 
 vi.mock('../../services/whatsappApi.js', () => ({
@@ -25,10 +25,10 @@ const basePrefs = {
 };
 
 describe('SettingsTab', () => {
-  it('updates acceptance mode and available days preferences', () => {
+  it('updates acceptance mode and available days preferences', async () => {
     const setPrefs = vi.fn();
 
-    render(
+    await act(async () => render(
       <SettingsTab
         uiV2
         groups={baseGroups}
@@ -42,7 +42,7 @@ describe('SettingsTab', () => {
         onClearHistory={vi.fn()}
         onLogout={vi.fn()}
       />,
-    );
+    ));
 
     fireEvent.click(screen.getByRole('button', { name: /Automático/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Ter' }));
@@ -52,10 +52,10 @@ describe('SettingsTab', () => {
     expect(prefUpdates).toContainEqual({ ...basePrefs, days: ['Seg', 'Ter'] });
   });
 
-  it('toggles monitored groups', () => {
+  it('toggles monitored groups', async () => {
     const setGroups = vi.fn();
 
-    render(
+    await act(async () => render(
       <SettingsTab
         uiV2
         groups={baseGroups}
@@ -69,7 +69,7 @@ describe('SettingsTab', () => {
         onClearHistory={vi.fn()}
         onLogout={vi.fn()}
       />,
-    );
+    ));
 
     fireEvent.click(screen.getByRole('switch', { name: 'Desativar Grupo A' }));
 
