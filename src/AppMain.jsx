@@ -59,8 +59,6 @@ const DEFAULT_PREFS = {
 };
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const POLL_MS = Number(import.meta.env.VITE_MONITOR_POLL_MS || 10000);
-
 
 function normalizePrefs(input) {
   if (!input || typeof input !== "object") {
