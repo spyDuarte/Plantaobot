@@ -100,4 +100,20 @@ describe('apiClient auth/csrf behavior', () => {
 
     window.removeEventListener('pb-auth-unauthorized', handler);
   });
+
+  it('maps html error payload to a friendly message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response('<!DOCTYPE html><html><body>404</body></html>', {
+        status: 404,
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+        },
+      }),
+    );
+
+    await expect(apiRequest('/auth/me')).rejects.toMatchObject({
+      message: 'Serviço indisponível no momento. Tente novamente em alguns instantes.',
+      status: 404,
+    });
+  });
 });
