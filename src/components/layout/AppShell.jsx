@@ -10,8 +10,8 @@ function NavButton({ item, active, onSelect }) {
       aria-current={active ? 'page' : undefined}
       aria-label={item.label}
     >
-      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span aria-hidden="true" style={{ fontSize: 16 }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <span aria-hidden="true" style={{ fontSize: 18, width: 28, textAlign: 'center' }}>
           {item.icon}
         </span>
         <span>{item.label}</span>
@@ -50,23 +50,23 @@ export default function AppShell({
             <div
               aria-hidden="true"
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
+                width: 44,
+                height: 44,
+                borderRadius: 12,
                 background: C.primary,
                 color: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 16,
+                fontSize: 20,
                 fontWeight: 700,
               }}
             >
               PB
             </div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: C.text0 }}>{title}</div>
-              <div style={{ fontSize: 12, color: C.text1 }}>{subtitle}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: C.text0 }}>{title}</div>
+              <div style={{ fontSize: 14, color: C.text1 }}>{subtitle}</div>
             </div>
           </div>
 
@@ -83,58 +83,64 @@ export default function AppShell({
 
           <div
             style={{
-              marginTop: 24,
+              marginTop: 32,
               paddingTop: 16,
               display: 'flex',
               flexDirection: 'column',
-              gap: 8,
+              gap: 12,
             }}
           >
-            <div style={{ fontSize: 12, color: C.text2, marginBottom: 8, paddingLeft: 12 }}>
+            <div style={{ fontSize: 14, color: C.text2, marginBottom: 4 }}>
               Sistema
             </div>
             <Button
               type="button"
               onClick={botOn ? onStopBot : onStartBot}
               variant={botOn ? 'danger' : 'primary'}
+              style={{ padding: '12px 16px', fontSize: 14 }}
             >
               {botOn ? 'Parar monitoramento' : 'Iniciar monitoramento'}
             </Button>
-            <Button type="button" onClick={onOpenNotifications} variant="secondary">
+            <Button
+              type="button"
+              onClick={onOpenNotifications}
+              variant="secondary"
+              style={{ padding: '12px 16px', fontSize: 14 }}
+            >
               Notificações {notificationCount > 0 ? `(${notificationCount})` : ''}
             </Button>
 
             <div
               style={{
-                marginTop: 12,
+                marginTop: 16,
                 borderTop: `1px solid ${C.border}`,
-                paddingTop: 16,
+                paddingTop: 20,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 12,
               }}
             >
               <div
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 40,
+                  height: 40,
                   borderRadius: '50%',
                   background: C.surface2,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: 600,
                   color: C.text1,
                 }}
               >
-                {(userName || 'M')[0].toUpperCase()}
+                {(userName || 'D')[0].toUpperCase()}
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: C.text0 }}>
-                  {userName || 'Médico'}
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.text0 }}>
+                  {userName || 'Dr. Lucas'}
                 </div>
-                <div style={{ fontSize: 11, color: C.text2 }}>Usuário ativo</div>
+                <div style={{ fontSize: 13, color: C.text2 }}>Usuário ativo</div>
               </div>
             </div>
           </div>
