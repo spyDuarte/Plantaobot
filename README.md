@@ -108,6 +108,11 @@ Copie `.env.example` para `.env` e ajuste conforme o modo escolhido.
 - `COOKIE_SECURE`
 - `COOKIE_SAME_SITE`
 - `CORS_ALLOWED_ORIGINS`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_PRO`
+- `STRIPE_PRICE_PREMIUM`
+- `ANTHROPIC_API_KEY` (opcional, para proxy de IA no backend)
 
 ## Endpoints esperados para operações
 
