@@ -92,7 +92,7 @@ Copie `.env.example` para `.env` e ajuste conforme o modo escolhido.
 - `VITE_AUTH_PROVIDER` (`supabase` | `bff`)
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- `VITE_API_BASE_URL` (default: `/api`)
+- `VITE_API_BASE_URL` (ex.: `https://seu-backend.onrender.com/api`; obrigatório em frontend publicado)
 - `VITE_MONITOR_POLL_MS` (default: `10000`)
 - `VITE_AUTH_REDIRECT_URL` (opcional)
 - `VITE_ANTHROPIC_API_KEY` (opcional)
@@ -146,7 +146,7 @@ Secrets recomendados no GitHub Actions:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_AUTH_REDIRECT_URL` (opcional)
-- `VITE_API_BASE_URL` (opcional)
+- `VITE_API_BASE_URL` (recomendado quando usar backend/BFF publicado)
 
 No Supabase (**Authentication → URL Configuration**):
 
