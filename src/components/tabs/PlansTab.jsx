@@ -155,7 +155,7 @@ function PlanCard({ plan, currentPlanId, onUpgrade, onManage, upgrading }) {
   );
 }
 
-export default function PlansTab({ uiV2, planId, onPlanChange }) {
+export default function PlansTab({ planId }) {
   const [plans] = useState(() => [
     {
       id: 'free',

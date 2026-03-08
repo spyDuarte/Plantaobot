@@ -290,7 +290,7 @@ export default function AppMain({ onLogout = null }) {
     setTyping,
   });
 
-  const { planId, limits: planLimits, refresh: refreshPlan } = usePlan();
+  const { planId, refresh: refreshPlan } = usePlan();
 
   const {
     botOn,
