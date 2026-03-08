@@ -1,26 +1,26 @@
 const palette = {
-  background: '#f8fafc', // Fundo geral mais claro e limpo
-  surface: '#ffffff',
-  surfaceMuted: '#f1f5f9',
-  surfaceStrong: '#e2e8f0',
-  text: '#0f172a', // Texto mais escuro e sério
-  textMuted: '#475569',
-  textSubtle: '#64748b',
-  border: '#e2e8f0',
-  borderStrong: '#cbd5e1',
-  primary: '#2563eb', // Azul B2B profissional
-  primarySoft: '#eff6ff',
-  success: '#059669', // Verde B2B corporativo
-  successSoft: '#ecfdf5',
-  warning: '#d97706',
-  warningSoft: '#fffbeb',
-  error: '#dc2626', // Vermelho erro forte
-  errorSoft: '#fef2f2',
-  info: '#3b82f6',
-  infoSoft: '#eff6ff',
-  accent: '#4f46e5',
-  accentSoft: '#eef2ff',
-  shadow: 'rgba(15, 23, 42, 0.08)', // Sombra elegante e discreta
+  background: '#f8fafc', // Clean, corporate background
+  surface: '#ffffff', // Pure white for cards
+  surfaceMuted: '#f1f5f9', // Very subtle gray for secondary areas
+  surfaceStrong: '#e2e8f0', // Stronger gray for robust borders or active states
+  text: '#0f172a', // High contrast dark text for readability
+  textMuted: '#475569', // Muted text for secondary info
+  textSubtle: '#64748b', // Subtle text for tertiary info
+  border: '#e2e8f0', // Clean default border
+  borderStrong: '#cbd5e1', // Hover or active border state
+  primary: '#2563eb', // Deep blue, authoritative and professional
+  primarySoft: '#eff6ff', // Extremely light blue for subtle highlights
+  success: '#059669', // Serious emerald green for success metrics
+  successSoft: '#ecfdf5', // Light green for success backgrounds
+  warning: '#d97706', // Amber for warnings
+  warningSoft: '#fffbeb', // Light amber background
+  error: '#dc2626', // Sharp red for errors or urgent actions
+  errorSoft: '#fef2f2', // Light red background
+  info: '#3b82f6', // Standard blue for informational elements
+  infoSoft: '#eff6ff', // Match primary soft for coherence
+  accent: '#4f46e5', // Indigo for secondary actions
+  accentSoft: '#eef2ff', // Light indigo
+  shadow: 'rgba(15, 23, 42, 0.05)', // Even more subtle, corporate shadow
 };
 
 export const C = {

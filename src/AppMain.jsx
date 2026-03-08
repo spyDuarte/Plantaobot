@@ -206,9 +206,6 @@ export default function AppMain({ onLogout = null }) {
   const [referralCode, setReferralCode] = useLocalStorage('pb_referral_code', '');
   const [lastShareAt, setLastShareAt] = useLocalStorage('pb_last_share_at', '');
 
-  const flags = getFeatureFlags();
-  const uiV2 = flags.ui_v2;
-
   const feedRef = useRef(null);
   const tid = useRef(0);
   const nid = useRef(0);
@@ -744,7 +741,7 @@ export default function AppMain({ onLogout = null }) {
   const tabContent = {
     dashboard: (
       <Dashboard
-        uiV2={uiV2}
+        uiV2={true}
         setTab={setTab}
         botOn={botOn}
         startBot={startBot}
@@ -761,7 +758,7 @@ export default function AppMain({ onLogout = null }) {
     ),
     feed: (
       <FeedTab
-        uiV2={uiV2}
+        uiV2={true}
         botOn={botOn}
         feed={feed}
         typing={typing}
@@ -772,7 +769,7 @@ export default function AppMain({ onLogout = null }) {
     ),
     swipe: (
       <SwipeTab
-        uiV2={uiV2}
+        uiV2={true}
         botOn={botOn}
         pending={pending}
         captured={captured}
@@ -784,7 +781,7 @@ export default function AppMain({ onLogout = null }) {
     ),
     captured: (
       <CapturedTab
-        uiV2={uiV2}
+        uiV2={true}
         captured={captured}
         rejected={rejected}
         total={total}
@@ -799,7 +796,7 @@ export default function AppMain({ onLogout = null }) {
     ),
     insights: (
       <InsightsTab
-        uiV2={uiV2}
+        uiV2={true}
         captured={captured}
         rejected={rejected}
         prefs={prefs}
@@ -814,13 +811,13 @@ export default function AppMain({ onLogout = null }) {
           name={name}
           captured={captured}
           rejected={rejected}
-          showHeader={!uiV2}
+          showHeader={false}
         />
       </Card>
     ),
     settings: (
       <SettingsTab
-        uiV2={uiV2}
+        uiV2={true}
         groups={groups}
         setGroups={setGroups}
         prefs={prefs}
@@ -855,9 +852,8 @@ export default function AppMain({ onLogout = null }) {
   return (
     <>
       <style>{CSS}</style>
-      {!uiV2 ? <BgOrbs /> : null}
       <Confetti active={confetti} />
-      {uiV2 ? <ToastViewport items={toasts} /> : <Toasts items={toasts} />}
+      <ToastViewport items={toasts} />
       <NotifDrawer open={notifOpen} notifs={notifs} onClose={() => setNotifOpen(false)} />
       {modal ? (
         <ShiftModal
@@ -869,149 +865,54 @@ export default function AppMain({ onLogout = null }) {
         />
       ) : null}
 
-      {uiV2 ? (
-        <AppShell
-          title="PlantaoBot"
-          subtitle="Operacao Clinica"
-          userName={name}
-          botOn={botOn}
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setTab}
-          onStartBot={startBot}
-          onStopBot={stopBot}
-          onOpenNotifications={() => setNotifOpen(true)}
-          notificationCount={notifs.length}
-        >
-          <div className="pb-tab-panels" style={{ animation: 'fadeUp .2s ease-out' }}>
-            {feedError ? (
-              <Card style={{ marginBottom: 24, borderLeft: `4px solid ${C.error}` }}>
-                <EmptyState
-                  icon="⚠️"
-                  title="Erro de monitoramento"
-                  description={feedError}
-                  action={
-                    <Button
-                      type="button"
-                      variant="danger"
-                      onClick={() => {
-                        startBot();
-                      }}
-                    >
-                      Reiniciar Monitoramento
-                    </Button>
-                  }
-                />
-              </Card>
-            ) : null}
+      <AppShell
+        title="PlantãoBot"
+        subtitle="Operação Clínica"
+        userName={name}
+        botOn={botOn}
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setTab}
+        onStartBot={startBot}
+        onStopBot={stopBot}
+        onOpenNotifications={() => setNotifOpen(true)}
+        notificationCount={notifs.length}
+      >
+        <div className="pb-tab-panels" style={{ animation: 'fadeUp .2s ease-out' }}>
+          {feedError ? (
+            <Card style={{ marginBottom: 24, borderLeft: `4px solid ${C.error}` }}>
+              <EmptyState
+                icon="⚠️"
+                title="Erro de monitoramento"
+                description={feedError}
+                action={
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => {
+                      startBot();
+                    }}
+                  >
+                    Reiniciar Monitoramento
+                  </Button>
+                }
+              />
+            </Card>
+          ) : null}
 
-            {apiLoading ? (
-              <Card style={{ marginBottom: 24 }}>
-                <EmptyState
-                  icon="🔄"
-                  title="Sincronizando dados reais"
-                  description="Carregando estado atual do backend..."
-                />
-              </Card>
-            ) : null}
-
-            {selectedContent}
-          </div>
-        </AppShell>
-      ) : (
-        <div
-          style={{
-            fontFamily: "'IBM Plex Sans', sans-serif",
-            background: C.bg0,
-            minHeight: '100vh',
-            color: C.tx0,
-            padding: 14,
-          }}
-        >
-          <Card style={{ marginBottom: 10 }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 17, fontWeight: 700 }}>PlantaoBot</div>
-                <div style={{ fontSize: 12, color: C.text1 }}>
-                  Dr(a). {(name || 'Medico').toUpperCase()}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Button type="button" variant="secondary" onClick={() => setNotifOpen(true)}>
-                  Alertas {notifs.length > 0 ? `(${notifs.length})` : ''}
-                </Button>
-                <Button
-                  type="button"
-                  variant={botOn ? 'danger' : 'primary'}
-                  onClick={botOn ? stopBot : startBot}
-                >
-                  {botOn ? 'Parar' : 'Iniciar'}
-                </Button>
-              </div>
-            </div>
-          </Card>
+          {apiLoading ? (
+            <Card style={{ marginBottom: 24 }}>
+              <EmptyState
+                icon="🔄"
+                title="Sincronizando dados reais"
+                description="Carregando estado atual do backend..."
+              />
+            </Card>
+          ) : null}
 
           {selectedContent}
-
-          <nav
-            role="navigation"
-            aria-label="Navegacao principal"
-            style={{
-              position: 'fixed',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              zIndex: 400,
-              background: 'rgba(255,255,255,0.96)',
-              borderTop: `1px solid ${C.border}`,
-              display: 'flex',
-              justifyContent: 'space-around',
-              padding: '8px 4px 12px',
-            }}
-          >
-            {tabs.map((item) => {
-              const active = activeTab === item.key;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => setTab(item.key)}
-                  aria-label={item.label}
-                  aria-current={active ? 'page' : undefined}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 3,
-                    background: active ? C.primarySoft : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '5px 12px',
-                    borderRadius: 10,
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  <span style={{ fontSize: 16, lineHeight: 1 }} aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <span
-                    style={{ fontSize: 10, fontWeight: 700, color: active ? C.primary : C.text2 }}
-                  >
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
         </div>
-      )}
+      </AppShell>
     </>
   );
 }

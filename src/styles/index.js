@@ -43,12 +43,12 @@ export const CSS = `
     --pb-color-info: ${C.info};
     --pb-color-border: ${C.border};
     --pb-color-border-strong: ${C.borderStrong};
-    --pb-shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
-    --pb-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+    --pb-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --pb-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -1px rgba(15, 23, 42, 0.03);
     --pb-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
-    --pb-radius-sm: 6px;
-    --pb-radius-md: 8px;
-    --pb-radius-lg: 12px;
+    --pb-radius-sm: 4px;
+    --pb-radius-md: 6px;
+    --pb-radius-lg: 8px;
     --pb-space-1: 4px;
     --pb-space-2: 8px;
     --pb-space-3: 12px;
@@ -135,13 +135,13 @@ export const CSS = `
     border-radius: var(--pb-radius-sm);
     background: transparent;
     color: var(--pb-color-text-muted);
-    padding: 10px 14px;
+    padding: 8px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 12px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     transition: background-color .15s ease, color .15s ease;
   }
@@ -155,7 +155,7 @@ export const CSS = `
 
   .pb-nav-btn[aria-current="page"] {
     background: var(--pb-color-surface-muted);
-    color: var(--pb-color-text);
+    color: var(--pb-color-primary);
     font-weight: 600;
   }
 
@@ -212,7 +212,7 @@ export const CSS = `
     border: 1px solid var(--pb-color-border);
     border-radius: var(--pb-radius-md);
     box-shadow: var(--pb-shadow-soft);
-    padding: 20px;
+    padding: 24px;
   }
 
   .ds-card-muted {
@@ -224,36 +224,45 @@ export const CSS = `
     border: 1px solid transparent;
     border-radius: var(--pb-radius-sm);
     padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all .15s ease;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
   }
 
   .ds-btn:focus-visible, .ds-btn-focus:focus-visible {
     outline: 2px solid var(--pb-color-primary);
-    outline-offset: 2px;
+    outline-offset: 1px;
   }
 
   .ds-btn:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    box-shadow: none;
   }
 
   .ds-btn-primary {
     background: var(--pb-color-primary);
     color: #ffffff;
     border-color: var(--pb-color-primary);
-    box-shadow: var(--pb-shadow-soft);
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
   }
 
   .ds-btn-primary:hover:not(:disabled) {
     background: #1d4ed8;
     border-color: #1d4ed8;
+  }
+
+  .ds-btn-primary:active:not(:disabled) {
+    background: #1e40af;
+    border-color: #1e40af;
+    box-shadow: none;
   }
 
   .ds-btn-secondary {
@@ -265,18 +274,30 @@ export const CSS = `
 
   .ds-btn-secondary:hover:not(:disabled) {
     background: var(--pb-color-surface-muted);
+    border-color: #94a3b8;
+  }
+
+  .ds-btn-secondary:active:not(:disabled) {
+    background: #e2e8f0;
+    box-shadow: none;
   }
 
   .ds-btn-danger {
     background: var(--pb-color-error);
     color: #ffffff;
     border-color: var(--pb-color-error);
-    box-shadow: var(--pb-shadow-soft);
+    box-shadow: 0 1px 2px rgba(220, 38, 38, 0.2);
   }
 
   .ds-btn-danger:hover:not(:disabled) {
     background: #b91c1c;
     border-color: #b91c1c;
+  }
+
+  .ds-btn-danger:active:not(:disabled) {
+    background: #991b1b;
+    border-color: #991b1b;
+    box-shadow: none;
   }
 
   .ds-field {
