@@ -46,9 +46,10 @@ jobs:
         run: npm run build
         env:
           VITE_BASE_PATH: ${{ env.VITE_BASE_PATH }}
-          # Supabase client-side auth + data
-          VITE_AUTH_PROVIDER: supabase
-          VITE_DATA_PROVIDER: supabase
+          # BFF backend auth + data for WhatsApp / Evolution API
+          VITE_AUTH_PROVIDER: bff
+          VITE_DATA_PROVIDER: bff
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           # Optional override for email redirect links
