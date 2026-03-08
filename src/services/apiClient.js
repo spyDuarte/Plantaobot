@@ -140,6 +140,35 @@ async function parseResponseBody(response) {
   return text || null;
 }
 
+function isHtmlPayload(value) {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  const sample = value.trimStart().slice(0, 256).toLowerCase();
+  return sample.startsWith('<!doctype html') || sample.startsWith('<html');
+}
+
+function buildApiErrorMessage({ data, status }) {
+  if (typeof data !== 'string') {
+    return data?.message || data?.error || `Request failed (${status})`;
+  }
+
+  if (!isHtmlPayload(data)) {
+    return data;
+  }
+
+  if (
+    API_BASE_URL === '/api' &&
+    typeof window !== 'undefined' &&
+    window.location.hostname.endsWith('.github.io')
+  ) {
+    return 'API indisponível. Configure VITE_API_BASE_URL para o backend publicado.';
+  }
+
+  return 'Serviço indisponível no momento. Tente novamente em alguns instantes.';
+}
+
 function dispatchUnauthorized(path) {
   if (typeof window === 'undefined') {
     return;
@@ -175,10 +204,7 @@ export async function apiRequest(path, options = {}) {
       dispatchUnauthorized(path);
     }
 
-    const message =
-      typeof data === 'string'
-        ? data
-        : data?.message || data?.error || `Request failed (${response.status})`;
+    const message = buildApiErrorMessage({ data, status: response.status });
     throw new ApiError(message, {
       status: response.status,
       data,

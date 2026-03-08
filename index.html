@@ -20,6 +20,20 @@
     </style>
   </head>
   <body>
+    <script>
+      (function restoreGithubPagesRoute() {
+        const params = new URLSearchParams(window.location.search);
+        const encodedPath = params.get('p');
+        if (!encodedPath) {
+          return;
+        }
+
+        const pathname = decodeURIComponent(encodedPath);
+        const rawQuery = params.get('q');
+        const query = rawQuery ? `?${decodeURIComponent(rawQuery)}` : '';
+        window.history.replaceState({}, '', `${pathname}${query}${window.location.hash}`);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
