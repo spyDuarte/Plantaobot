@@ -212,7 +212,7 @@ export default function PlansTab({ planId }) {
     try {
       const { url } = await createPortalSession();
       if (url) {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        window.location.href = url;
       }
     } catch (err) {
       setCheckoutError(
