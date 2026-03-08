@@ -88,7 +88,9 @@ describe('App auth gate', () => {
       expect(screen.getByRole('button', { name: 'Entrar na Plataforma' })).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'invalido' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), {
+      target: { value: 'invalido' },
+    });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Senha123' } });
     const loginForm = screen.getByPlaceholderText('seu@email.com').closest('form');
     fireEvent.submit(loginForm);
@@ -114,7 +116,9 @@ describe('App auth gate', () => {
       expect(screen.getByRole('button', { name: 'Entrar na Plataforma' })).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'sem-arroba' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), {
+      target: { value: 'sem-arroba' },
+    });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Senha123' } });
     let loginForm = screen.getByPlaceholderText('seu@email.com').closest('form');
     fireEvent.submit(loginForm);

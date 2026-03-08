@@ -4,14 +4,12 @@ import SettingsTab from './SettingsTab.jsx';
 
 vi.mock('../../services/whatsappApi.js', () => ({
   fetchWhatsappConfig: vi.fn().mockResolvedValue(null),
-  fetchWhatsappStatus: vi
-    .fn()
-    .mockResolvedValue({
-      connected: false,
-      connectedAt: null,
-      instanceId: null,
-      phoneNumber: null,
-    }),
+  fetchWhatsappStatus: vi.fn().mockResolvedValue({
+    connected: false,
+    connectedAt: null,
+    instanceId: null,
+    phoneNumber: null,
+  }),
   resetWhatsappToken: vi.fn(),
   buildWebhookUrl: vi.fn().mockReturnValue(''),
   connectWhatsapp: vi.fn(),

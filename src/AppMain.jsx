@@ -9,11 +9,9 @@ import {
   Confetti,
   Toasts,
   ToastViewport,
-  Badge,
   Button,
   Card,
   EmptyState,
-  PageHeader,
 } from './components/ui/index.jsx';
 import AppShell from './components/layout/AppShell.jsx';
 import ShiftModal from './components/ShiftModal.jsx';
@@ -28,7 +26,6 @@ import SettingsTab from './components/tabs/SettingsTab.jsx';
 import AIChat from './components/AIChat.jsx';
 import { getFeatureFlags } from './config/featureFlags.js';
 import { createNotification, createNavItem, createToast } from './models/uiModels.js';
-import { normalizeShiftCollection } from './utils/shiftViewModel.js';
 import {
   DEFAULT_GROWTH_METRICS,
   areGrowthMetricsEqual,
@@ -677,9 +674,6 @@ export default function AppMain({ onLogout = null }) {
     [prefs.minVal],
   );
 
-  const capturedVm = useMemo(() => normalizeShiftCollection(captured), [captured]);
-  const rejectedVm = useMemo(() => normalizeShiftCollection(rejected), [rejected]);
-  const pendingVm = useMemo(() => normalizeShiftCollection(pending), [pending]);
   const normalizedGrowthMetrics = useMemo(
     () => normalizeGrowthMetrics(growthMetrics),
     [growthMetrics],
@@ -857,13 +851,6 @@ export default function AppMain({ onLogout = null }) {
       />
     );
   }
-
-  const kpis = [
-    { label: 'Capturados', value: capturedVm.length, tone: 'success' },
-    { label: 'Pendentes', value: pendingVm.length, tone: 'warning' },
-    { label: 'Descartados', value: rejectedVm.length, tone: 'error' },
-    { label: 'Total', value: `R$ ${fmt(total)}`, tone: 'primary' },
-  ];
 
   return (
     <>

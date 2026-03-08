@@ -104,3 +104,6 @@ AggregateError [ECONNREFUSED]:
 AggregateError [ECONNREFUSED]:
     at internalConnectMultiple (node:net:1134:18)
     at afterConnectMultiple (node:net:1715:7)
+12:39:19 AM [vite] (client) hmr update /src/AppMain.jsx
+12:40:01 AM [vite] (client) hmr update /src/AppMain.jsx
+12:45:56 AM [vite] (client) hmr update /src/AppMain.jsx

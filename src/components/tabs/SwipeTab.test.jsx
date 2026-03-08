@@ -53,6 +53,8 @@ describe('SwipeTab', () => {
     );
 
     expect(screen.getByText('Sua fila está vazia')).toBeInTheDocument();
-    expect(screen.getByText('Inicie o monitoramento no dashboard para receber plantões.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Inicie o monitoramento no dashboard para receber plantões.'),
+    ).toBeInTheDocument();
   });
 });
