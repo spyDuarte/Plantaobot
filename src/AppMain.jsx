@@ -23,7 +23,6 @@ import SwipeTab from './components/tabs/SwipeTab.jsx';
 import CapturedTab from './components/tabs/CapturedTab.jsx';
 import InsightsTab from './components/tabs/InsightsTab.jsx';
 import SettingsTab from './components/tabs/SettingsTab.jsx';
-import AIChat from './components/AIChat.jsx';
 import { createNotification, createNavItem, createToast } from './models/uiModels.js';
 import {
   DEFAULT_GROWTH_METRICS,
@@ -817,14 +816,24 @@ export default function AppMain({ onLogout = null }) {
       />
     ),
     ai: (
-      <Card style={{ minHeight: 'calc(100vh - 220px)', display: 'flex', flexDirection: 'column' }}>
-        <AIChat
-          prefs={prefs}
-          name={name}
-          captured={captured}
-          rejected={rejected}
-          showHeader={false}
-        />
+      <Card
+        style={{
+          minHeight: 'calc(100vh - 220px)',
+          display: 'grid',
+          placeItems: 'center',
+          textAlign: 'center',
+          padding: 24,
+        }}
+      >
+        <div style={{ maxWidth: 520 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: C.text0, marginBottom: 8 }}>
+            Assistente IA em desenvolvimento
+          </div>
+          <div style={{ fontSize: 14, color: C.text1, lineHeight: 1.6 }}>
+            A integração com inteligência artificial está temporariamente desativada.
+            Em breve, vamos liberar novamente sugestões e análises automáticas.
+          </div>
+        </div>
       </Card>
     ),
     plans: (
