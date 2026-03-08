@@ -24,7 +24,6 @@ import CapturedTab from './components/tabs/CapturedTab.jsx';
 import InsightsTab from './components/tabs/InsightsTab.jsx';
 import SettingsTab from './components/tabs/SettingsTab.jsx';
 import AIChat from './components/AIChat.jsx';
-import { getFeatureFlags } from './config/featureFlags.js';
 import { createNotification, createNavItem, createToast } from './models/uiModels.js';
 import {
   DEFAULT_GROWTH_METRICS,
