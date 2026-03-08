@@ -125,23 +125,23 @@ export const CSS = `
   .pb-nav-list {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    margin-top: 24px;
+    gap: 12px;
+    margin-top: 36px;
   }
 
   .pb-nav-btn {
     width: 100%;
     border: none;
-    border-radius: var(--pb-radius-sm);
+    border-radius: 6px;
     background: transparent;
     color: var(--pb-color-text-muted);
-    padding: 8px 12px;
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 500;
     transition: background-color .15s ease, color .15s ease;
   }
@@ -154,7 +154,7 @@ export const CSS = `
   }
 
   .pb-nav-btn[aria-current="page"] {
-    background: var(--pb-color-surface-muted);
+    background: var(--pb-color-primarySoft);
     color: var(--pb-color-primary);
     font-weight: 600;
   }
