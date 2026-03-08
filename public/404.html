@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Redirecionando…</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function redirectToIndex() {
+        var locationInfo = window.location;
+        var segments = locationInfo.pathname.split('/').filter(Boolean);
+        var repoBase = segments.length > 0 ? '/' + segments[0] : '';
+        var route = locationInfo.pathname.slice(repoBase.length) || '/';
+        var encodedRoute = encodeURIComponent(route);
+        var encodedQuery = encodeURIComponent(locationInfo.search.slice(1));
+        var hash = locationInfo.hash || '';
+        var target =
+          repoBase + '/?p=' + encodedRoute + (locationInfo.search ? '&q=' + encodedQuery : '') + hash;
+
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
