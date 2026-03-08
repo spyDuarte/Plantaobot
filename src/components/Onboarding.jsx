@@ -352,26 +352,15 @@ export default function Onboarding({
             obStep < ob.length - 1 ? setObStep((p) => p + 1) : onDone();
           }}
           style={{
-            background: 'rgba(7,14,29,0.88)',
-            backdropFilter: 'blur(28px)',
-            border: '1px solid ' + C.bd,
-            borderRadius: 24,
-            padding: 28,
-            boxShadow: '0 30px 80px rgba(0,0,0,.8)',
+            background: C.surface1,
+            border: '1px solid ' + C.border,
+            borderRadius: 12,
+            padding: 32,
+            boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.05), 0 4px 6px -2px rgba(15, 23, 42, 0.03)',
             position: 'relative',
             overflow: 'hidden',
           }}
         >
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 1,
-              background: 'linear-gradient(90deg,transparent,' + C.em + '66,transparent)',
-            }}
-          />
           <div style={{ fontSize: 42, marginBottom: 12, lineHeight: 1 }} aria-hidden="true">
             {ob[obStep].icon}
           </div>
@@ -417,18 +406,8 @@ export default function Onboarding({
             )}
             <button
               type="submit"
-              style={{
-                flex: 2,
-                padding: '13px',
-                background: 'linear-gradient(135deg,' + C.em + ',' + C.cy + ')',
-                border: 'none',
-                borderRadius: 13,
-                color: '#021810',
-                fontWeight: 800,
-                cursor: 'pointer',
-                fontSize: 14,
-                boxShadow: '0 4px 24px ' + C.emA,
-              }}
+              className="ds-btn ds-btn-primary"
+              style={{ flex: 2, padding: '12px', fontSize: 14 }}
             >
               {obStep < ob.length - 1 ? 'Continuar →' : '🚀 Começar'}
             </button>
