@@ -76,11 +76,7 @@ function normalizeShift(raw, { isOffer = true } = {}) {
     return null;
   }
 
-  const id =
-    raw.id ??
-    raw.offerId ??
-    raw.shiftId ??
-    `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = raw.id ?? raw.offerId ?? raw.shiftId ?? crypto.randomUUID();
   const sender = raw.sender ?? raw.senderName ?? raw.origin ?? 'Sistema';
 
   return {
