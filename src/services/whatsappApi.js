@@ -17,7 +17,6 @@ export async function resetWhatsappToken() {
   return apiRequest('/whatsapp/config/reset-token', { method: 'POST' });
 }
 
-
 /**
  * Fetches current WhatsApp connection status.
  * @returns {Promise<{ connected: boolean, connectedAt: string | null, instanceId: string | null, phoneNumber: string | null }>}

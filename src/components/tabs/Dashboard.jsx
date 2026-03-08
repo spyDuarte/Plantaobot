@@ -1,23 +1,40 @@
-import { C } from "../../constants/colors.js";
-import { fmt } from "../../utils/index.js";
-import { Badge, Button, Card, PageHeader, Waveform } from "../ui/index.jsx";
+import { C } from '../../constants/colors.js';
+import { fmt } from '../../utils/index.js';
+import { Badge, Button, Card, PageHeader, Waveform } from '../ui/index.jsx';
 
-function StatCard({ label, value, tone = "info" }) {
+function StatCard({ label, value, tone = 'info' }) {
   const toneMap = {
-    info: { border: "rgba(34, 120, 166, 0.24)", bg: C.infoSoft, color: C.info },
-    success: { border: "rgba(15, 159, 111, 0.24)", bg: C.successSoft, color: C.success },
-    warning: { border: "rgba(201, 122, 20, 0.24)", bg: C.warningSoft, color: C.warning },
-    error: { border: "rgba(201, 62, 74, 0.24)", bg: C.errorSoft, color: C.error },
+    info: { border: C.border, bg: C.surface1, color: C.text0 },
+    success: { border: C.successSoft, bg: C.successSoft, color: C.success },
+    warning: { border: C.warningSoft, bg: C.warningSoft, color: C.warning },
+    error: { border: C.errorSoft, bg: C.errorSoft, color: C.error },
   };
   const colors = toneMap[tone] || toneMap.info;
 
   return (
-    <Card muted style={{ borderColor: colors.border, background: colors.bg, padding: 12 }}>
-      <div style={{ fontSize: 11, color: C.text2 }}>{label}</div>
-      <div className="pb-mono" style={{ marginTop: 4, fontSize: 24, fontWeight: 700, color: colors.color }}>
+    <div
+      style={{
+        border: `1px solid ${colors.border}`,
+        background: colors.bg,
+        borderRadius: 8,
+        padding: 16,
+        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.05)',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 13,
+          color: tone === 'info' ? C.text2 : colors.color,
+          fontWeight: 500,
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </div>
+      <div className="pb-mono" style={{ fontSize: 28, fontWeight: 700, color: colors.color }}>
         {value}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -37,118 +54,207 @@ export default function Dashboard({
   setModal,
 }) {
   const action = (
-    <Button type="button" variant={botOn ? "danger" : "primary"} onClick={botOn ? stopBot : startBot}>
-      {botOn ? "Parar bot" : "Iniciar bot"}
+    <Button
+      type="button"
+      variant={botOn ? 'danger' : 'primary'}
+      onClick={botOn ? stopBot : startBot}
+    >
+      {botOn ? 'Parar bot' : 'Iniciar bot'}
     </Button>
   );
 
   return (
-    <div style={{ animation: "fadeUp .25s both" }}>
+    <div style={{ animation: 'fadeUp .2s ease-out' }}>
       {uiV2 ? (
         <PageHeader
           title="Dashboard operacional"
-          subtitle="Visao consolidada de capturas e monitoramento em tempo real"
+          subtitle="Visão consolidada de capturas e monitoramento em tempo real"
           action={action}
         />
       ) : null}
 
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div style={{ fontSize: 12, color: C.text2, fontWeight: 600 }}>Total garantido</div>
-          <Badge tone={botOn ? "success" : "warning"}>{botOn ? "Monitorando" : "Pausado"}</Badge>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            border: `1px solid ${C.border}`,
+            background: C.surface1,
+            borderRadius: 8,
+            padding: 20,
+            gridColumn: '1 / -1',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 14, color: C.text2, fontWeight: 600, marginBottom: 4 }}>
+              Total garantido (Mês)
+            </div>
+            <div className="pb-mono" style={{ fontSize: 36, fontWeight: 700, color: C.primary }}>
+              R$ {fmt(total)}
+            </div>
+          </div>
+          <div>
+            <Badge tone={botOn ? 'success' : 'warning'}>
+              {botOn ? 'Monitorando ativamente' : 'Pausado'}
+            </Badge>
+          </div>
         </div>
-        <div className="pb-mono" style={{ fontSize: 34, fontWeight: 700, color: C.primary }}>
-          R$ {fmt(total)}
-        </div>
-      </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8, marginBottom: 12 }}>
         <StatCard label="Analisados" value={captured.length + rejected.length} tone="info" />
         <StatCard label="Capturados" value={captured.length} tone="success" />
         <StatCard label="Pendentes" value={pending.length} tone="warning" />
         <StatCard label="Descartados" value={rejected.length} tone="error" />
       </div>
 
-      <Card style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Status do monitoramento</div>
-            <div style={{ marginTop: 3, fontSize: 12, color: C.text1 }}>
-              {botOn
-                ? `Escaneando ${actG.length} grupos no modo ${prefs.auto ? "automatico" : "manual"}`
-                : `${actG.length} grupos ativos e prontos para iniciar`}
-            </div>
-          </div>
-          {botOn ? <Waveform active /> : <Badge tone="warning">Inativo</Badge>}
-        </div>
-
-        {botOn ? (
-          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-            {actG.map((group) => (
-              <div
-                key={group.id}
-                style={{
-                  padding: "8px 10px",
-                  borderRadius: 10,
-                  border: `1px solid ${C.border}`,
-                  background: C.surface2,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ fontSize: 12 }}>{group.emoji} {group.name}</span>
-                <span style={{ fontSize: 11, color: typing === group.name ? C.info : C.success, fontWeight: 600 }}>
-                  {typing === group.name ? "Digitando..." : "Ativo"}
-                </span>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: 24,
+        }}
+      >
+        <Card>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: C.text0 }}>
+                Status do Monitoramento
               </div>
-            ))}
-          </div>
-        ) : null}
-      </Card>
-
-      {captured.length > 0 ? (
-        <Card style={{ marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <strong style={{ fontSize: 13 }}>Ultimos capturados</strong>
-            <Button type="button" variant="secondary" onClick={() => setTab(prefs.auto ? "captured" : "swipe")}>Ver todos</Button>
+              <div style={{ marginTop: 4, fontSize: 13, color: C.text2 }}>
+                {botOn
+                  ? `Analisando ${actG.length} grupos no modo ${prefs.auto ? 'automático' : 'manual'}`
+                  : `${actG.length} grupos ativos e configurados`}
+              </div>
+            </div>
+            {botOn ? <Waveform active /> : <Badge tone="warning">Inativo</Badge>}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {captured
-              .slice(-3)
-              .reverse()
-              .map((shift) => (
-                <button
-                  key={shift.id}
-                  type="button"
-                  onClick={() => setModal(shift)}
+          {botOn ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {actG.map((group) => (
+                <div
+                  key={group.id}
                   style={{
+                    padding: '10px 14px',
+                    borderRadius: 6,
                     border: `1px solid ${C.border}`,
-                    borderRadius: 10,
-                    background: "#fff",
-                    padding: "10px 12px",
-                    textAlign: "left",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    cursor: "pointer",
+                    background: C.surface2,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
-                  <span>
-                    <strong style={{ fontSize: 12, color: C.text0 }}>{shift.hospital}</strong>
-                    <span style={{ display: "block", marginTop: 2, fontSize: 11, color: C.text2 }}>
-                      {shift.date} - {shift.spec}
-                    </span>
+                  <span style={{ fontSize: 13, color: C.text0, fontWeight: 500 }}>
+                    {group.emoji} {group.name}
                   </span>
-                  <span className="pb-mono" style={{ fontSize: 14, color: C.success, fontWeight: 700 }}>
-                    R$ {fmt(shift.val)}
+                  <span
+                    style={{
+                      fontSize: 12,
+                      color: typing === group.name ? C.info : C.success,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {typing === group.name ? 'Digitando...' : 'Ativo'}
                   </span>
-                </button>
+                </div>
               ))}
-          </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                fontSize: 13,
+                color: C.text2,
+                padding: '16px',
+                background: C.surface2,
+                borderRadius: 6,
+                textAlign: 'center',
+              }}
+            >
+              O bot precisa ser iniciado para captar novas oportunidades.
+            </div>
+          )}
         </Card>
-      ) : null}
+
+        {captured.length > 0 ? (
+          <Card>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 600, color: C.text0 }}>Últimas Capturas</div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setTab(prefs.auto ? 'captured' : 'swipe')}
+                style={{ padding: '6px 12px', fontSize: 13 }}
+              >
+                Ver todas
+              </Button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {captured
+                .slice(-4)
+                .reverse()
+                .map((shift) => (
+                  <button
+                    key={shift.id}
+                    type="button"
+                    onClick={() => setModal(shift)}
+                    style={{
+                      border: `1px solid ${C.border}`,
+                      borderRadius: 6,
+                      background: C.surface1,
+                      padding: '12px 14px',
+                      textAlign: 'left',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: 'pointer',
+                      transition: 'border-color .15s ease',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.borderColor = C.primarySoft)}
+                    onMouseOut={(e) => (e.currentTarget.style.borderColor = C.border)}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: C.text0 }}>
+                        {shift.hospital}
+                      </div>
+                      <div style={{ display: 'block', marginTop: 4, fontSize: 12, color: C.text2 }}>
+                        {shift.date} • {shift.spec}
+                      </div>
+                    </div>
+                    <div
+                      className="pb-mono"
+                      style={{ fontSize: 15, color: C.success, fontWeight: 600 }}
+                    >
+                      R$ {fmt(shift.val)}
+                    </div>
+                  </button>
+                ))}
+            </div>
+          </Card>
+        ) : null}
+      </div>
 
       {!uiV2 ? action : null}
     </div>

@@ -327,7 +327,7 @@ export async function fetchFeedFromSupabase({ cursor } = {}) {
   const items = (data || []).map((row) => {
     if (row.is_offer && row.offer) {
       return {
-        ...(row.offer),
+        ...row.offer,
         id: row.offer?.id || row.id,
         group: row.group_name || row.offer?.group || 'Grupo',
         sender: row.sender_name || row.offer?.sender || 'Sistema',

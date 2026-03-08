@@ -4,7 +4,11 @@ import { createHttpError } from '../errors.js';
 
 function createServiceClient(config) {
   if (!config.supabaseUrl || !config.supabaseServiceRoleKey) {
-    throw createHttpError(500, 'SUPABASE_ENV_MISSING', 'Supabase service env vars are not configured.');
+    throw createHttpError(
+      500,
+      'SUPABASE_ENV_MISSING',
+      'Supabase service env vars are not configured.',
+    );
   }
 
   return createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
@@ -21,9 +25,14 @@ function assertNoError(error, message, { status = 500 } = {}) {
     return;
   }
 
-  throw createHttpError(status, 'DATA_STORE_ERROR', message || error.message || 'Data store operation failed.', {
-    source: error,
-  });
+  throw createHttpError(
+    status,
+    'DATA_STORE_ERROR',
+    message || error.message || 'Data store operation failed.',
+    {
+      source: error,
+    },
+  );
 }
 
 function nowIso() {
@@ -31,12 +40,16 @@ function nowIso() {
 }
 
 function toCanonicalGroupId(group, fallbackId) {
-  const jid = String(group?.jid || '').trim().toLowerCase();
+  const jid = String(group?.jid || '')
+    .trim()
+    .toLowerCase();
   if (jid && jid.endsWith('@g.us')) {
     return jid;
   }
 
-  const id = String(group?.id || '').trim().toLowerCase();
+  const id = String(group?.id || '')
+    .trim()
+    .toLowerCase();
   if (id && id.endsWith('@g.us')) {
     return id;
   }
@@ -66,9 +79,7 @@ export function createSupabaseDataStore(config) {
         payload.name = String(name).slice(0, 80);
       }
 
-      const { error } = await client
-        .from('profiles')
-        .upsert(payload, { onConflict: 'id' });
+      const { error } = await client.from('profiles').upsert(payload, { onConflict: 'id' });
 
       assertNoError(error, 'Failed to upsert profile.');
     },
@@ -183,21 +194,19 @@ export function createSupabaseDataStore(config) {
 
     async startMonitoring(userId, { groups, preferences, operatorName }) {
       const sessionId = crypto.randomUUID();
-      const { error } = await client
-        .from('monitor_sessions')
-        .upsert(
-          {
-            user_id: userId,
-            session_id: sessionId,
-            active: true,
-            groups,
-            preferences,
-            operator_name: operatorName,
-            cursor: null,
-            updated_at: nowIso(),
-          },
-          { onConflict: 'user_id' },
-        );
+      const { error } = await client.from('monitor_sessions').upsert(
+        {
+          user_id: userId,
+          session_id: sessionId,
+          active: true,
+          groups,
+          preferences,
+          operator_name: operatorName,
+          cursor: null,
+          updated_at: nowIso(),
+        },
+        { onConflict: 'user_id' },
+      );
 
       assertNoError(error, 'Failed to start monitor session.');
 
@@ -271,8 +280,7 @@ export function createSupabaseDataStore(config) {
         };
       });
 
-      const nextCursor =
-        rows.length > 0 ? rows[rows.length - 1].received_at : cursor || nowIso();
+      const nextCursor = rows.length > 0 ? rows[rows.length - 1].received_at : cursor || nowIso();
 
       return { items, nextCursor };
     },
@@ -365,16 +373,14 @@ export function createSupabaseDataStore(config) {
     async resetWebhookToken(userId) {
       const newToken = crypto.randomUUID();
 
-      const { error } = await client
-        .from('whatsapp_config')
-        .upsert(
-          {
-            user_id: userId,
-            webhook_token: newToken,
-            updated_at: nowIso(),
-          },
-          { onConflict: 'user_id' },
-        );
+      const { error } = await client.from('whatsapp_config').upsert(
+        {
+          user_id: userId,
+          webhook_token: newToken,
+          updated_at: nowIso(),
+        },
+        { onConflict: 'user_id' },
+      );
 
       assertNoError(error, 'Failed to reset webhook token.');
 
@@ -398,7 +404,10 @@ export function createSupabaseDataStore(config) {
       assertNoError(error, 'Failed to persist WhatsApp instance metadata.');
     },
 
-    async saveWhatsappStatusTransition(userId, { connected, instanceId = null, phoneNumber = null }) {
+    async saveWhatsappStatusTransition(
+      userId,
+      { connected, instanceId = null, phoneNumber = null },
+    ) {
       const now = nowIso();
       const payload = {
         user_id: userId,
@@ -422,7 +431,10 @@ export function createSupabaseDataStore(config) {
       assertNoError(error, 'Failed to persist WhatsApp status transition.');
     },
 
-    async saveWhatsappMessage(userId, { messageId, jid, groupName, senderName, rawText, isOffer, offer, receivedAt }) {
+    async saveWhatsappMessage(
+      userId,
+      { messageId, jid, groupName, senderName, rawText, isOffer, offer, receivedAt },
+    ) {
       const row = {
         user_id: userId,
         message_id: messageId || null,
@@ -495,10 +507,7 @@ export function createSupabaseDataStore(config) {
     },
 
     async clearCaptures(userId) {
-      const { error } = await client
-        .from('captures')
-        .delete()
-        .eq('user_id', userId);
+      const { error } = await client.from('captures').delete().eq('user_id', userId);
 
       assertNoError(error, 'Failed to clear captures.');
     },
@@ -545,10 +554,7 @@ export function createSupabaseDataStore(config) {
     },
 
     async clearRejections(userId) {
-      const { error } = await client
-        .from('rejections')
-        .delete()
-        .eq('user_id', userId);
+      const { error } = await client.from('rejections').delete().eq('user_id', userId);
 
       assertNoError(error, 'Failed to clear rejections.');
     },
@@ -566,16 +572,14 @@ export function createSupabaseDataStore(config) {
     },
 
     async savePreferences(userId, preferences) {
-      const { error } = await client
-        .from('preferences')
-        .upsert(
-          {
-            user_id: userId,
-            preferences,
-            updated_at: nowIso(),
-          },
-          { onConflict: 'user_id' },
-        );
+      const { error } = await client.from('preferences').upsert(
+        {
+          user_id: userId,
+          preferences,
+          updated_at: nowIso(),
+        },
+        { onConflict: 'user_id' },
+      );
 
       assertNoError(error, 'Failed to save preferences.');
     },
@@ -599,10 +603,7 @@ export function createSupabaseDataStore(config) {
     },
 
     async saveGroups(userId, groups) {
-      const { error: deleteError } = await client
-        .from('groups')
-        .delete()
-        .eq('user_id', userId);
+      const { error: deleteError } = await client.from('groups').delete().eq('user_id', userId);
       assertNoError(deleteError, 'Failed to clear groups before save.');
 
       if (!Array.isArray(groups) || groups.length === 0) {
@@ -618,9 +619,7 @@ export function createSupabaseDataStore(config) {
         emoji: String(group.emoji || '🏥').slice(0, 24),
       }));
 
-      const { error: insertError } = await client
-        .from('groups')
-        .insert(rows);
+      const { error: insertError } = await client.from('groups').insert(rows);
       assertNoError(insertError, 'Failed to save groups.');
     },
 
@@ -646,7 +645,9 @@ export function createSupabaseDataStore(config) {
         .in('group_id', groupIds);
       assertNoError(existingError, 'Failed to fetch existing groups before merge.');
 
-      const activeByGroupId = new Map((existingRows || []).map((row) => [row.group_id, Boolean(row.active)]));
+      const activeByGroupId = new Map(
+        (existingRows || []).map((row) => [row.group_id, Boolean(row.active)]),
+      );
 
       const rows = normalizedGroups.map((group) => ({
         user_id: userId,
@@ -667,8 +668,12 @@ export function createSupabaseDataStore(config) {
     },
 
     async isActiveGroupByJidOrName(userId, { jid, groupName } = {}) {
-      const normalizedJid = String(jid || '').trim().toLowerCase();
-      const normalizedGroupName = String(groupName || '').trim().toLowerCase();
+      const normalizedJid = String(jid || '')
+        .trim()
+        .toLowerCase();
+      const normalizedGroupName = String(groupName || '')
+        .trim()
+        .toLowerCase();
 
       if (!normalizedJid && !normalizedGroupName) {
         return false;
@@ -695,21 +700,16 @@ export function createSupabaseDataStore(config) {
     },
 
     async clearHistory(userId) {
-      await Promise.all([
-        this.clearCaptures(userId),
-        this.clearRejections(userId),
-      ]);
+      await Promise.all([this.clearCaptures(userId), this.clearRejections(userId)]);
     },
 
     async trackEvent(userId, event) {
-      const { error } = await client
-        .from('events')
-        .insert({
-          user_id: userId,
-          name: event.name,
-          payload: event.payload,
-          timestamp: event.timestamp,
-        });
+      const { error } = await client.from('events').insert({
+        user_id: userId,
+        name: event.name,
+        payload: event.payload,
+        timestamp: event.timestamp,
+      });
 
       assertNoError(error, 'Failed to persist event telemetry.');
     },

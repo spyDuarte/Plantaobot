@@ -28,7 +28,9 @@ describe('whatsapp parser shift offer detection', () => {
 
 describe('whatsapp parser extraction for informal formats', () => {
   it('extracts value from "R$ 1200 livre" format', () => {
-    const offer = parseShiftOffer('Cobertura PS central, R$ 1200 livre', { groupName: 'Grupo Teste' });
+    const offer = parseShiftOffer('Cobertura PS central, R$ 1200 livre', {
+      groupName: 'Grupo Teste',
+    });
     expect(offer.val).toBe(1200);
   });
 

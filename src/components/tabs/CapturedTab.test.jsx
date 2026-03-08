@@ -33,8 +33,8 @@ describe('CapturedTab', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Compartilhar resultado' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Exportar CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Compartilhar Relatório' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exportar (CSV)' }));
 
     expect(onShareCaptured).toHaveBeenCalledTimes(1);
     expect(exportCSV).toHaveBeenCalledTimes(1);
@@ -53,6 +53,6 @@ describe('CapturedTab', () => {
       />,
     );
 
-    expect(screen.getByText('Nenhum plantao capturado')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum plantão capturado')).toBeInTheDocument();
   });
 });

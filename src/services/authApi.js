@@ -15,10 +15,13 @@ function getClientOrThrow() {
   const client = getSupabaseClient();
 
   if (!client || !isSupabaseConfigured()) {
-    throw new ApiError('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.', {
-      status: 500,
-      path: '/auth/config',
-    });
+    throw new ApiError(
+      'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.',
+      {
+        status: 500,
+        path: '/auth/config',
+      },
+    );
   }
 
   return client;
@@ -76,7 +79,9 @@ async function signupWithSupabase(body) {
   }
 
   if (data.user) {
-    await client.from('profiles').upsert({ id: data.user.id, name: body.name }, { onConflict: 'id' });
+    await client
+      .from('profiles')
+      .upsert({ id: data.user.id, name: body.name }, { onConflict: 'id' });
   }
 
   return {
@@ -213,50 +218,46 @@ async function bootstrapImportWithSupabase(body) {
     return { imported: false, alreadyImported: true };
   }
 
-  await client.from('preferences').upsert({ user_id: userId, preferences: body.prefs || {} }, { onConflict: 'user_id' });
+  await client
+    .from('preferences')
+    .upsert({ user_id: userId, preferences: body.prefs || {} }, { onConflict: 'user_id' });
 
   if (Array.isArray(body.groups) && body.groups.length > 0) {
-    await client
-      .from('groups')
-      .upsert(
-        body.groups.map((group) => ({
-          user_id: userId,
-          group_id: String(group.id),
-          name: group.name || 'Grupo',
-          members: Number(group.members || 0),
-          active: Boolean(group.active),
-          emoji: group.emoji || '🏥',
-        })),
-        { onConflict: 'user_id,group_id' },
-      );
+    await client.from('groups').upsert(
+      body.groups.map((group) => ({
+        user_id: userId,
+        group_id: String(group.id),
+        name: group.name || 'Grupo',
+        members: Number(group.members || 0),
+        active: Boolean(group.active),
+        emoji: group.emoji || '🏥',
+      })),
+      { onConflict: 'user_id,group_id' },
+    );
   }
 
   if (Array.isArray(body.captured) && body.captured.length > 0) {
-    await client
-      .from('captures')
-      .upsert(
-        body.captured.map((offer) => ({
-          user_id: userId,
-          offer_id: String(offer.id || `${Date.now()}`),
-          offer,
-          source: 'bootstrap',
-        })),
-        { onConflict: 'user_id,offer_id' },
-      );
+    await client.from('captures').upsert(
+      body.captured.map((offer) => ({
+        user_id: userId,
+        offer_id: String(offer.id || `${Date.now()}`),
+        offer,
+        source: 'bootstrap',
+      })),
+      { onConflict: 'user_id,offer_id' },
+    );
   }
 
   if (Array.isArray(body.rejected) && body.rejected.length > 0) {
-    await client
-      .from('rejections')
-      .upsert(
-        body.rejected.map((offer) => ({
-          user_id: userId,
-          offer_id: String(offer.id || `${Date.now()}`),
-          offer,
-          reason: 'bootstrap',
-        })),
-        { onConflict: 'user_id,offer_id' },
-      );
+    await client.from('rejections').upsert(
+      body.rejected.map((offer) => ({
+        user_id: userId,
+        offer_id: String(offer.id || `${Date.now()}`),
+        offer,
+        reason: 'bootstrap',
+      })),
+      { onConflict: 'user_id,offer_id' },
+    );
   }
 
   await client

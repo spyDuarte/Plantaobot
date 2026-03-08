@@ -179,7 +179,8 @@ function parseHours(text) {
   }
 
   // Duration mention: "12 horas" or "duração: 12h"
-  const durationMatch = normalizedText.match(/(\d+)\s*horas?/i) || normalizedText.match(/duracao[:\s]+(\d+)\s*h/i);
+  const durationMatch =
+    normalizedText.match(/(\d+)\s*horas?/i) || normalizedText.match(/duracao[:\s]+(\d+)\s*h/i);
   if (durationMatch) {
     return `${durationMatch[1]}h`;
   }
@@ -196,7 +197,9 @@ function parseLocation(text) {
   const cityMatch =
     normalizedText.match(/cidad[ae][:\s]+([^\n,]+)/i) ||
     normalizedText.match(/bairro[:\s]+([^\n,]+)/i) ||
-    text.match(/\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõ]+(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõ]+)*)\s*[-–]\s*[A-Z]{2}\b/);
+    text.match(
+      /\b([A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõ]+(?:\s+[A-ZÁÉÍÓÚÂÊÎÔÛÃÕ][a-záéíóúâêîôûãõ]+)*)\s*[-–]\s*[A-Z]{2}\b/,
+    );
 
   if (cityMatch?.[1]) {
     return cityMatch[1].trim().slice(0, 80);
@@ -393,15 +396,23 @@ export function normalizeIncomingWebhookStatus(payload) {
   const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
   const evolutionState = mapConnectionState(data.state || data.connection || data.status);
 
-  if (event.includes('connection') || event.includes('status.instance') || event.includes('instance.status')) {
+  if (
+    event.includes('connection') ||
+    event.includes('status.instance') ||
+    event.includes('instance.status')
+  ) {
     if (evolutionState === null) {
       return null;
     }
 
     return {
       connected: evolutionState,
-      instanceId: payload.instance ? String(payload.instance) : (data.instance ? String(data.instance) : null),
-      phoneNumber: data.number ? String(data.number) : (data.phone ? String(data.phone) : null),
+      instanceId: payload.instance
+        ? String(payload.instance)
+        : data.instance
+          ? String(data.instance)
+          : null,
+      phoneNumber: data.number ? String(data.number) : data.phone ? String(data.phone) : null,
     };
   }
 

@@ -19,13 +19,17 @@ describe('authValidation', () => {
   });
 
   it('enforces signup and reset password boundaries', () => {
-    expect(validateSignupForm({ name: 'A', email: 'a@b.com', password: 'Senha123' }).valid).toBe(false);
-    expect(validateSignupForm({ name: 'Ana', email: 'ana@example.com', password: '1234567' }).message).toBe(
-      'Senha precisa ter entre 8 e 128 caracteres.',
+    expect(validateSignupForm({ name: 'A', email: 'a@b.com', password: 'Senha123' }).valid).toBe(
+      false,
     );
+    expect(
+      validateSignupForm({ name: 'Ana', email: 'ana@example.com', password: '1234567' }).message,
+    ).toBe('Senha precisa ter entre 8 e 128 caracteres.');
 
     expect(validateResetPassword('  NovaSenha123 ').valid).toBe(true);
-    expect(validateResetPassword('senha com espaco').message).toBe('Senha não pode conter espaços.');
+    expect(validateResetPassword('senha com espaco').message).toBe(
+      'Senha não pode conter espaços.',
+    );
   });
 
   it('validates emails with the same contract used in forms', () => {

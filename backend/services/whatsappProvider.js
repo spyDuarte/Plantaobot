@@ -34,12 +34,7 @@ function extractChatItems(payload) {
     return payload;
   }
 
-  const candidates = [
-    payload.chats,
-    payload.groups,
-    payload.data,
-    payload.result,
-  ];
+  const candidates = [payload.chats, payload.groups, payload.data, payload.result];
 
   for (const candidate of candidates) {
     if (Array.isArray(candidate)) {
@@ -67,9 +62,10 @@ function toGroupShape(chat) {
   };
 }
 
-
 function normalizeState(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 function isConnectedState(state) {
@@ -117,19 +113,36 @@ function toInstanceStatus(payload, instanceId) {
 
 function mapEvolutionError(error) {
   if (error?.name === 'AbortError') {
-    return createHttpError(504, 'EVOLUTION_TIMEOUT', 'A Evolution API demorou para responder. Tente novamente em instantes.');
+    return createHttpError(
+      504,
+      'EVOLUTION_TIMEOUT',
+      'A Evolution API demorou para responder. Tente novamente em instantes.',
+    );
   }
 
   const status = Number(error?.status || error?.details?.status || 0);
   const detailsMessage = String(error?.details?.message || error?.message || '');
   const lower = detailsMessage.toLowerCase();
 
-  if (status === 401 || status === 403 || lower.includes('invalid api key') || lower.includes('unauthorized')) {
-    return createHttpError(502, 'EVOLUTION_INVALID_KEY', 'Falha de autenticação na Evolution API. Verifique a chave da integração.');
+  if (
+    status === 401 ||
+    status === 403 ||
+    lower.includes('invalid api key') ||
+    lower.includes('unauthorized')
+  ) {
+    return createHttpError(
+      502,
+      'EVOLUTION_INVALID_KEY',
+      'Falha de autenticação na Evolution API. Verifique a chave da integração.',
+    );
   }
 
   if (status === 409 || lower.includes('already exists') || lower.includes('instance already')) {
-    return createHttpError(409, 'EVOLUTION_INSTANCE_EXISTS', 'A instância do WhatsApp já existe. Vamos reutilizar a conexão existente.');
+    return createHttpError(
+      409,
+      'EVOLUTION_INSTANCE_EXISTS',
+      'A instância do WhatsApp já existe. Vamos reutilizar a conexão existente.',
+    );
   }
 
   if (error?.status && error?.code) {
@@ -144,7 +157,11 @@ export function createWhatsappProvider(config = {}) {
   const apiKey = config.evolutionApiKey || process.env.EVOLUTION_API_KEY || '';
 
   if (!baseUrl || !apiKey) {
-    throw createHttpError(500, 'EVOLUTION_ENV_MISSING', 'Configuração da Evolution API ausente no ambiente.');
+    throw createHttpError(
+      500,
+      'EVOLUTION_ENV_MISSING',
+      'Configuração da Evolution API ausente no ambiente.',
+    );
   }
 
   async function requestEvolution(path, { method = 'GET', body, timeoutMs = 15000 } = {}) {
@@ -165,11 +182,16 @@ export function createWhatsappProvider(config = {}) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw createHttpError(response.status, 'EVOLUTION_HTTP_ERROR', data?.message || 'Evolution API request failed.', {
-          status: response.status,
-          message: data?.message,
-          data,
-        });
+        throw createHttpError(
+          response.status,
+          'EVOLUTION_HTTP_ERROR',
+          data?.message || 'Evolution API request failed.',
+          {
+            status: response.status,
+            message: data?.message,
+            data,
+          },
+        );
       }
 
       return data;
@@ -211,8 +233,12 @@ export function createWhatsappProvider(config = {}) {
     },
 
     async getInstanceQr({ instanceId }) {
-      const connectPayload = await requestEvolution(`/instance/connect/${instanceId}`, { method: 'GET' });
-      const qrPayload = await requestEvolution(`/instance/qrcode/${instanceId}`, { method: 'GET' }).catch(() => null);
+      const connectPayload = await requestEvolution(`/instance/connect/${instanceId}`, {
+        method: 'GET',
+      });
+      const qrPayload = await requestEvolution(`/instance/qrcode/${instanceId}`, {
+        method: 'GET',
+      }).catch(() => null);
 
       const rawQr =
         connectPayload?.base64 ||
@@ -238,7 +264,9 @@ export function createWhatsappProvider(config = {}) {
     async getInstanceConnectionStatus({ instanceId }) {
       const attempts = [
         async () => {
-          const payload = await requestEvolution(`/instance/connectionState/${instanceId}`, { method: 'GET' });
+          const payload = await requestEvolution(`/instance/connectionState/${instanceId}`, {
+            method: 'GET',
+          });
           return toInstanceStatus(payload, instanceId);
         },
         async () => {
@@ -252,7 +280,13 @@ export function createWhatsappProvider(config = {}) {
                 : [];
 
           const match = instances.find((item) => {
-            const candidateId = String(item?.instanceName || item?.name || item?.instance?.instanceName || item?.instanceId || '').trim();
+            const candidateId = String(
+              item?.instanceName ||
+                item?.name ||
+                item?.instance?.instanceName ||
+                item?.instanceId ||
+                '',
+            ).trim();
             return candidateId === instanceId;
           });
 
@@ -278,14 +312,14 @@ export function createWhatsappProvider(config = {}) {
         }
       }
 
-      throw lastError || createHttpError(502, 'EVOLUTION_ERROR', 'Falha ao consultar status da instância WhatsApp.');
+      throw (
+        lastError ||
+        createHttpError(502, 'EVOLUTION_ERROR', 'Falha ao consultar status da instância WhatsApp.')
+      );
     },
 
     async listInstanceGroups({ instanceId }) {
-      const attempts = [
-        `/chat/findChats/${instanceId}`,
-        `/group/fetchAllGroups/${instanceId}`,
-      ];
+      const attempts = [`/chat/findChats/${instanceId}`, `/group/fetchAllGroups/${instanceId}`];
 
       let chats = [];
       let lastError = null;
@@ -306,9 +340,7 @@ export function createWhatsappProvider(config = {}) {
         throw lastError;
       }
 
-      const groups = chats
-        .map(toGroupShape)
-        .filter(Boolean);
+      const groups = chats.map(toGroupShape).filter(Boolean);
 
       return groups;
     },

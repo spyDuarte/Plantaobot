@@ -3,7 +3,11 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
-import { createMockAuthService, createMockDataStore, extractCsrfToken } from './helpers/mockDeps.js';
+import {
+  createMockAuthService,
+  createMockDataStore,
+  extractCsrfToken,
+} from './helpers/mockDeps.js';
 
 async function setup(options = {}) {
   const app = createApp({
@@ -41,25 +45,19 @@ describe('backend auth integration', () => {
   it('supports signup -> confirm -> login -> me -> logout', async () => {
     const { agent, csrf } = await setup();
 
-    const signup = await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. Maria',
-        email: 'maria@example.com',
-        password: 'SenhaForte123',
-      });
+    const signup = await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. Maria',
+      email: 'maria@example.com',
+      password: 'SenhaForte123',
+    });
 
     expect(signup.status).toBe(201);
     expect(signup.body.requiresEmailVerification).toBe(true);
 
-    const loginBeforeConfirm = await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'maria@example.com',
-        password: 'SenhaForte123',
-      });
+    const loginBeforeConfirm = await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'maria@example.com',
+      password: 'SenhaForte123',
+    });
 
     expect(loginBeforeConfirm.status).toBe(403);
 
@@ -71,13 +69,10 @@ describe('backend auth integration', () => {
     expect(confirm.status).toBe(200);
     expect(confirm.body.emailVerified).toBe(true);
 
-    const login = await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'maria@example.com',
-        password: 'SenhaForte123',
-      });
+    const login = await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'maria@example.com',
+      password: 'SenhaForte123',
+    });
 
     expect(login.status).toBe(200);
     expect(login.body.emailVerified).toBe(true);
@@ -86,10 +81,7 @@ describe('backend auth integration', () => {
     expect(me.status).toBe(200);
     expect(me.body.user.email).toBe('maria@example.com');
 
-    const logout = await agent
-      .post('/api/auth/logout')
-      .set('X-CSRF-Token', csrf)
-      .send({});
+    const logout = await agent.post('/api/auth/logout').set('X-CSRF-Token', csrf).send({});
 
     expect(logout.status).toBe(204);
 
@@ -100,27 +92,21 @@ describe('backend auth integration', () => {
   it('refreshes session from refresh cookie when access token is stale', async () => {
     const { app, agent, csrf } = await setup();
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. Bruno',
-        email: 'bruno@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. Bruno',
+      email: 'bruno@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'bruno@example.com', type: 'signup' });
 
-    const login = await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'bruno@example.com',
-        password: 'SenhaForte123',
-      });
+    const login = await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'bruno@example.com',
+      password: 'SenhaForte123',
+    });
 
     const refreshToken = extractCookieValue(login.headers['set-cookie'], 'pb_rt');
 
@@ -137,14 +123,11 @@ describe('backend auth integration', () => {
   it('runs forgot/recovery/reset password flow', async () => {
     const { agent, csrf } = await setup();
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dra. Lara',
-        email: 'lara@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dra. Lara',
+      email: 'lara@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
@@ -173,10 +156,7 @@ describe('backend auth integration', () => {
     expect(reset.status).toBe(200);
     expect(reset.body.ok).toBe(true);
 
-    await agent
-      .post('/api/auth/logout')
-      .set('X-CSRF-Token', csrf)
-      .send({});
+    await agent.post('/api/auth/logout').set('X-CSRF-Token', csrf).send({});
 
     const loginWithOldPassword = await agent
       .post('/api/auth/login')
@@ -196,27 +176,21 @@ describe('backend auth integration', () => {
   it('keeps bootstrap-import idempotent', async () => {
     const { agent, csrf } = await setup();
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dra. Ana',
-        email: 'ana@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dra. Ana',
+      email: 'ana@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'ana@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'ana@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'ana@example.com',
+      password: 'SenhaForte123',
+    });
 
     const payload = {
       prefs: {
@@ -249,31 +223,24 @@ describe('backend auth integration', () => {
     expect(second.body.alreadyImported).toBe(true);
   });
 
-
   it('blocks monitor start when WhatsApp is not connected', async () => {
     const { agent, csrf } = await setup();
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dra. Bia',
-        email: 'bia@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dra. Bia',
+      email: 'bia@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'bia@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'bia@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'bia@example.com',
+      password: 'SenhaForte123',
+    });
 
     const response = await agent
       .post('/api/monitor/start')
@@ -304,32 +271,23 @@ describe('backend auth integration', () => {
       whatsappProvider,
     });
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. João',
-        email: 'joao@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. João',
+      email: 'joao@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'joao@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'joao@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'joao@example.com',
+      password: 'SenhaForte123',
+    });
 
-    const response = await agent
-      .post('/api/whatsapp/connect')
-      .set('X-CSRF-Token', csrf)
-      .send({});
+    const response = await agent.post('/api/whatsapp/connect').set('X-CSRF-Token', csrf).send({});
 
     expect(response.status).toBe(200);
     expect(response.body.instanceId).toBe('user-user-1');
@@ -362,32 +320,23 @@ describe('backend auth integration', () => {
       whatsappProvider,
     });
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. Leo',
-        email: 'leo@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. Leo',
+      email: 'leo@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'leo@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'leo@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'leo@example.com',
+      password: 'SenhaForte123',
+    });
 
-    await agent
-      .post('/api/whatsapp/connect')
-      .set('X-CSRF-Token', csrf)
-      .send({});
+    await agent.post('/api/whatsapp/connect').set('X-CSRF-Token', csrf).send({});
 
     const liveStatus = await agent.get('/api/whatsapp/status?refresh=1');
     expect(liveStatus.status).toBe(200);
@@ -403,27 +352,21 @@ describe('backend auth integration', () => {
   it('returns authenticated WhatsApp status and persists webhook status transitions', async () => {
     const { agent, csrf } = await setup();
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. Caio',
-        email: 'caio@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. Caio',
+      email: 'caio@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'caio@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'caio@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'caio@example.com',
+      password: 'SenhaForte123',
+    });
 
     const waConfig = await agent.get('/api/whatsapp/config');
 
@@ -472,27 +415,21 @@ describe('backend auth integration', () => {
   it('drops group messages from inactive groups without persisting', async () => {
     const { agent, csrf } = await setup();
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. Ivo',
-        email: 'ivo@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. Ivo',
+      email: 'ivo@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'ivo@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'ivo@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'ivo@example.com',
+      password: 'SenhaForte123',
+    });
 
     const waConfig = await agent.get('/api/whatsapp/config');
 
@@ -501,7 +438,13 @@ describe('backend auth integration', () => {
       .set('X-CSRF-Token', csrf)
       .send({
         groups: [
-          { id: '120363999999999999@g.us', name: 'Grupo Bloqueado', members: 10, emoji: '🏥', active: false },
+          {
+            id: '120363999999999999@g.us',
+            name: 'Grupo Bloqueado',
+            members: 10,
+            emoji: '🏥',
+            active: false,
+          },
         ],
       });
 
@@ -530,7 +473,6 @@ describe('backend auth integration', () => {
     expect(feedResponse.body.items).toHaveLength(0);
   });
 
-
   it('syncs WhatsApp groups preserving active flag from existing groups', async () => {
     const whatsappProvider = {
       async createInstanceForUser() {
@@ -553,32 +495,23 @@ describe('backend auth integration', () => {
       whatsappProvider,
     });
 
-    await agent
-      .post('/api/auth/signup')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        name: 'Dr. Rafaela',
-        email: 'rafaela@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/signup').set('X-CSRF-Token', csrf).send({
+      name: 'Dr. Rafaela',
+      email: 'rafaela@example.com',
+      password: 'SenhaForte123',
+    });
 
     await agent
       .post('/api/auth/confirm')
       .set('X-CSRF-Token', csrf)
       .send({ token_hash: 'rafaela@example.com', type: 'signup' });
 
-    await agent
-      .post('/api/auth/login')
-      .set('X-CSRF-Token', csrf)
-      .send({
-        email: 'rafaela@example.com',
-        password: 'SenhaForte123',
-      });
+    await agent.post('/api/auth/login').set('X-CSRF-Token', csrf).send({
+      email: 'rafaela@example.com',
+      password: 'SenhaForte123',
+    });
 
-    await agent
-      .post('/api/whatsapp/connect')
-      .set('X-CSRF-Token', csrf)
-      .send({});
+    await agent.post('/api/whatsapp/connect').set('X-CSRF-Token', csrf).send({});
 
     await agent
       .put('/api/groups')
@@ -589,8 +522,7 @@ describe('backend auth integration', () => {
         ],
       });
 
-    const syncResponse = await agent
-      .get('/api/whatsapp/groups');
+    const syncResponse = await agent.get('/api/whatsapp/groups');
 
     expect(syncResponse.status).toBe(200);
     expect(syncResponse.body.groups).toEqual([
@@ -598,5 +530,4 @@ describe('backend auth integration', () => {
       { id: '1203631@g.us', name: 'Clínica Geral', members: 89, emoji: '🏥', active: true },
     ]);
   });
-
 });

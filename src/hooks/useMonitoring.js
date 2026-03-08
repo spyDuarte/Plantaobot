@@ -1,5 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { fetchMonitorStatus, startMonitoring, stopMonitoring, fetchFeed } from "../services/monitoringApi.js";
+import { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  fetchMonitorStatus,
+  startMonitoring,
+  stopMonitoring,
+  fetchFeed,
+} from '../services/monitoringApi.js';
 
 const POLL_MS = Number(import.meta.env.VITE_MONITOR_POLL_MS || 10000);
 
@@ -41,9 +46,9 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
         onFeedItems(response.items);
       }
     } catch (error) {
-      const message = error?.message || "Falha ao consultar o feed em tempo real.";
+      const message = error?.message || 'Falha ao consultar o feed em tempo real.';
       setFeedError(message);
-      toast("Erro no monitoramento", message, "error", "system");
+      toast('Erro no monitoramento', message, 'error', 'system');
     } finally {
       pollInFlightRef.current = false;
     }
@@ -71,11 +76,16 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
       monitorSessionIdRef.current = response.sessionId;
       setBotOn(true);
       startPolling();
-      toast("Monitoramento iniciado", "Conexão ativa com o backend de ofertas.", "success", "system");
+      toast(
+        'Monitoramento iniciado',
+        'Conexão ativa com o backend de ofertas.',
+        'success',
+        'system',
+      );
     } catch (error) {
-      const message = error?.message || "Não foi possível iniciar o monitoramento real.";
+      const message = error?.message || 'Não foi possível iniciar o monitoramento real.';
       setFeedError(message);
-      toast("Falha ao iniciar", message, "error", "system");
+      toast('Falha ao iniciar', message, 'error', 'system');
     }
   }, [groups, monitorSessionIdRef, name, prefs, startPolling, toast]);
 
@@ -85,9 +95,14 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
 
     try {
       await stopMonitoring(monitorSessionIdRef.current);
-      toast("Monitoramento pausado", "Conexão com backend encerrada.", "info", "system");
+      toast('Monitoramento pausado', 'Conexão com backend encerrada.', 'info', 'system');
     } catch (error) {
-      toast("Falha ao pausar", error?.message || "Não foi possível encerrar o monitoramento remotamente.", "warning", "system");
+      toast(
+        'Falha ao pausar',
+        error?.message || 'Não foi possível encerrar o monitoramento remotamente.',
+        'warning',
+        'system',
+      );
     }
   }, [monitorSessionIdRef, stopPolling, toast]);
 
@@ -100,9 +115,10 @@ export function useMonitoring({ groups, prefs, name, monitorSessionIdRef, onFeed
 
       return { isBotActive };
     } catch (error) {
-      const message = error?.message || "Não foi possível inicializar os dados reais do monitoramento.";
+      const message =
+        error?.message || 'Não foi possível inicializar os dados reais do monitoramento.';
       setFeedError(message);
-      toast("API indisponível", message, "warning", "system");
+      toast('API indisponível', message, 'warning', 'system');
       return { isBotActive: false };
     } finally {
       setApiLoading(false);

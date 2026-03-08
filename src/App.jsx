@@ -1,7 +1,8 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppMain from './AppMain.jsx';
 import { CSS } from './styles/index.js';
-import { BgOrbs, Badge, Button, Card, Input } from './components/ui/index.jsx';
+import { C } from './constants/colors.js';
+import { Badge, Button, Input } from './components/ui/index.jsx';
 import {
   bootstrapImport,
   confirmAuth,
@@ -28,11 +29,12 @@ import {
 //   unset + supabase        → on only when VITE_SUPABASE_URL/ANON_KEY are defined
 //   unset + bff             → always on (BFF handles its own session cookie)
 const _authProvider = String(import.meta.env.VITE_AUTH_PROVIDER || 'supabase').toLowerCase();
-const _supabaseReady = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+const _supabaseReady = Boolean(
+  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY,
+);
 const AUTH_ENABLED =
   import.meta.env.VITE_AUTH_ENABLED === 'true' ||
-  (import.meta.env.VITE_AUTH_ENABLED !== 'false' &&
-    (_authProvider === 'bff' || _supabaseReady));
+  (import.meta.env.VITE_AUTH_ENABLED !== 'false' && (_authProvider === 'bff' || _supabaseReady));
 
 const STATUS = {
   LOADING: 'loading',
@@ -162,8 +164,10 @@ function ToneMessage({ item }) {
   }
 
   return (
-    <div style={{ marginBottom: 12 }}>
-      <Badge tone={item.tone}>{item.text}</Badge>
+    <div style={{ marginBottom: 20 }}>
+      <Badge tone={item.tone} style={{ display: 'block', textAlign: 'center', padding: '8px' }}>
+        {item.text}
+      </Badge>
     </div>
   );
 }
@@ -172,26 +176,56 @@ function AuthLayout({ title, subtitle, children }) {
   return (
     <>
       <style>{CSS}</style>
-      <BgOrbs />
       <div
         style={{
           minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 16,
-          position: 'relative',
-          zIndex: 1,
+          padding: 24,
+          background: C.background || '#f8fafc',
         }}
       >
-        <Card style={{ width: '100%', maxWidth: 480 }}>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>PlantaoBot</div>
-            <div style={{ fontSize: 13, color: '#5f7187' }}>{title}</div>
-            {subtitle ? <div style={{ fontSize: 12, color: '#72849b', marginTop: 4 }}>{subtitle}</div> : null}
+        <div
+          style={{
+            width: '100%',
+            maxWidth: 440,
+            background: C.surface1,
+            padding: 32,
+            borderRadius: 12,
+            boxShadow:
+              '0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04)',
+            border: `1px solid ${C.border}`,
+          }}
+        >
+          <div style={{ marginBottom: 24, textAlign: 'center' }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                background: C.primary,
+                color: '#fff',
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                fontSize: 24,
+                fontWeight: 'bold',
+              }}
+            >
+              PB
+            </div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: C.text0, marginBottom: 8 }}>
+              Plantaobot
+            </div>
+            <div style={{ fontSize: 15, color: C.text1 }}>{title}</div>
+            {subtitle ? (
+              <div style={{ fontSize: 13, color: C.text2, marginTop: 4 }}>{subtitle}</div>
+            ) : null}
           </div>
           {children}
-        </Card>
+        </div>
       </div>
     </>
   );
@@ -268,7 +302,10 @@ export default function App() {
       }
 
       setStatus(STATUS.UNAUTHENTICATED);
-      setMessage({ tone: 'error', text: errorMessage(error, 'Falha ao validar sua sessão atual.') });
+      setMessage({
+        tone: 'error',
+        text: errorMessage(error, 'Falha ao validar sua sessão atual.'),
+      });
       return false;
     }
   }, [runBootstrapImport, syncProfileName]);
@@ -284,7 +321,7 @@ export default function App() {
       setStatus(STATUS.UNAUTHENTICATED);
       setAuthMode(MODE.LOGIN);
       setSession({ user: null, profile: null, emailVerified: false });
-      setMessage({ tone: 'warning', text: 'Sessao expirada. Faça login novamente.' });
+      setMessage({ tone: 'warning', text: 'Sessão expirada. Faça login novamente.' });
     };
 
     if (typeof window !== 'undefined') {
@@ -323,7 +360,10 @@ export default function App() {
 
           setStatus(STATUS.UNAUTHENTICATED);
           setAuthMode(MODE.LOGIN);
-          setMessage({ tone: 'error', text: errorMessage(error, 'Nao foi possivel processar o link de confirmação.') });
+          setMessage({
+            tone: 'error',
+            text: errorMessage(error, 'Não foi possível processar o link de confirmação.'),
+          });
         } finally {
           clearAuthCallbackParams();
         }
@@ -357,125 +397,149 @@ export default function App() {
     setMessage({ tone: 'info', text: 'Sessão encerrada.' });
   }, []);
 
-  const handleLogin = useCallback(async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    setMessage(null);
+  const handleLogin = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      setMessage(null);
 
-    const validation = validateLoginForm(loginForm);
+      const validation = validateLoginForm(loginForm);
 
-    if (!validation.valid) {
-      setMessage({ tone: 'warning', text: validation.message });
-      setBusy(false);
-      return;
-    }
-
-    setLoginForm(validation.normalized);
-
-    try {
-      await login(validation.normalized);
-      await loadCurrentSession();
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 403) {
-        setStatus(STATUS.UNVERIFIED);
-        setSession((previous) => ({
-          ...previous,
-          user: {
-            ...(previous.user || {}),
-            email: loginForm.email,
-          },
-          emailVerified: false,
-        }));
-        setMessage({ tone: 'warning', text: 'Confirme seu email para concluir o login.' });
-      } else {
-        setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível fazer login.') });
+      if (!validation.valid) {
+        setMessage({ tone: 'warning', text: validation.message });
+        setBusy(false);
+        return;
       }
-    } finally {
-      setBusy(false);
-    }
-  }, [loadCurrentSession, loginForm]);
 
-  const handleSignup = useCallback(async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    setMessage(null);
+      setLoginForm(validation.normalized);
 
-    const validation = validateSignupForm(signupForm);
-
-    if (!validation.valid) {
-      setMessage({ tone: 'warning', text: validation.message });
-      setBusy(false);
-      return;
-    }
-
-    setSignupForm(validation.normalized);
-
-    try {
-      const result = await signup(validation.normalized);
-
-      if (result.emailVerified) {
+      try {
+        await login(validation.normalized);
         await loadCurrentSession();
-      } else {
-        setAuthMode(MODE.LOGIN);
-        setLoginForm((previous) => ({ ...previous, email: validation.normalized.email }));
-        setMessage({ tone: 'info', text: 'Conta criada. Verifique seu email para ativar o acesso.' });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 403) {
+          setStatus(STATUS.UNVERIFIED);
+          setSession((previous) => ({
+            ...previous,
+            user: {
+              ...(previous.user || {}),
+              email: loginForm.email,
+            },
+            emailVerified: false,
+          }));
+          setMessage({ tone: 'warning', text: 'Confirme seu email para concluir o login.' });
+        } else {
+          setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível fazer login.') });
+        }
+      } finally {
+        setBusy(false);
       }
-    } catch (error) {
-      setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível criar sua conta.') });
-    } finally {
-      setBusy(false);
-    }
-  }, [loadCurrentSession, signupForm]);
+    },
+    [loadCurrentSession, loginForm],
+  );
 
-  const handleForgotPassword = useCallback(async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    setMessage(null);
+  const handleSignup = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      setMessage(null);
 
-    const validation = validateEmailPayload(forgotEmail);
+      const validation = validateSignupForm(signupForm);
 
-    if (!validation.valid) {
-      setMessage({ tone: 'warning', text: validation.message });
-      setBusy(false);
-      return;
-    }
+      if (!validation.valid) {
+        setMessage({ tone: 'warning', text: validation.message });
+        setBusy(false);
+        return;
+      }
 
-    setForgotEmail(validation.normalized);
+      setSignupForm(validation.normalized);
 
-    try {
-      await forgotPassword({ email: validation.normalized });
-      setMessage({ tone: 'success', text: 'Enviamos um link para redefinir sua senha.' });
-    } catch (error) {
-      setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível enviar o email de recuperação.') });
-    } finally {
-      setBusy(false);
-    }
-  }, [forgotEmail]);
+      try {
+        const result = await signup(validation.normalized);
 
-  const handleResetPassword = useCallback(async (event) => {
-    event.preventDefault();
-    setBusy(true);
-    setMessage(null);
+        if (result.emailVerified) {
+          await loadCurrentSession();
+        } else {
+          setAuthMode(MODE.LOGIN);
+          setLoginForm((previous) => ({ ...previous, email: validation.normalized.email }));
+          setMessage({
+            tone: 'info',
+            text: 'Conta criada. Verifique seu email para ativar o acesso.',
+          });
+        }
+      } catch (error) {
+        setMessage({
+          tone: 'error',
+          text: errorMessage(error, 'Não foi possível criar sua conta.'),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [loadCurrentSession, signupForm],
+  );
 
-    const validation = validateResetPassword(resetValue);
+  const handleForgotPassword = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      setMessage(null);
 
-    if (!validation.valid) {
-      setMessage({ tone: 'warning', text: validation.message });
-      setBusy(false);
-      return;
-    }
+      const validation = validateEmailPayload(forgotEmail);
 
-    try {
-      await resetPassword({ newPassword: validation.normalized });
-      setResetValue('');
-      setMessage({ tone: 'success', text: 'Senha atualizada com sucesso.' });
-      await loadCurrentSession();
-    } catch (error) {
-      setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível redefinir sua senha.') });
-    } finally {
-      setBusy(false);
-    }
-  }, [loadCurrentSession, resetValue]);
+      if (!validation.valid) {
+        setMessage({ tone: 'warning', text: validation.message });
+        setBusy(false);
+        return;
+      }
+
+      setForgotEmail(validation.normalized);
+
+      try {
+        await forgotPassword({ email: validation.normalized });
+        setMessage({ tone: 'success', text: 'Enviamos um link para redefinir sua senha.' });
+      } catch (error) {
+        setMessage({
+          tone: 'error',
+          text: errorMessage(error, 'Não foi possível enviar o email de recuperação.'),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [forgotEmail],
+  );
+
+  const handleResetPassword = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      setMessage(null);
+
+      const validation = validateResetPassword(resetValue);
+
+      if (!validation.valid) {
+        setMessage({ tone: 'warning', text: validation.message });
+        setBusy(false);
+        return;
+      }
+
+      try {
+        await resetPassword({ newPassword: validation.normalized });
+        setResetValue('');
+        setMessage({ tone: 'success', text: 'Senha atualizada com sucesso.' });
+        await loadCurrentSession();
+      } catch (error) {
+        setMessage({
+          tone: 'error',
+          text: errorMessage(error, 'Não foi possível redefinir sua senha.'),
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [loadCurrentSession, resetValue],
+  );
 
   const resendTargetEmail = useMemo(
     () => session.user?.email || signupForm.email || loginForm.email,
@@ -486,7 +550,10 @@ export default function App() {
     const validation = validateEmailPayload(resendTargetEmail);
 
     if (!validation.valid) {
-      setMessage({ tone: 'warning', text: 'Informe um email para reenviar o link de confirmação.' });
+      setMessage({
+        tone: 'warning',
+        text: 'Informe um email para reenviar o link de confirmação.',
+      });
       return;
     }
 
@@ -497,7 +564,10 @@ export default function App() {
       await resendVerification({ email: validation.normalized });
       setMessage({ tone: 'success', text: 'Email de verificação reenviado.' });
     } catch (error) {
-      setMessage({ tone: 'error', text: errorMessage(error, 'Não foi possível reenviar o email de verificação.') });
+      setMessage({
+        tone: 'error',
+        text: errorMessage(error, 'Não foi possível reenviar o email de verificação.'),
+      });
     } finally {
       setBusy(false);
     }
@@ -509,15 +579,25 @@ export default function App() {
 
   if (status === STATUS.LOADING || status === STATUS.PROCESSING_CALLBACK || bootstrapBusy) {
     return (
-      <AuthLayout title="Autenticando" subtitle="Preparando sua sessão segura.">
+      <AuthLayout title="Acesso seguro">
         <ToneMessage item={message} />
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontSize: 13, color: '#5f7187' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              border: `3px solid ${C.border}`,
+              borderTopColor: C.primary,
+              animation: 'spin 1s linear infinite',
+            }}
+          />
+          <div style={{ fontSize: 14, color: C.text1 }}>
             {status === STATUS.PROCESSING_CALLBACK
               ? 'Validando token de email...'
               : bootstrapBusy
                 ? 'Sincronizando dados iniciais da conta...'
-                : 'Verificando sessão atual...'}
+                : 'Verificando sessão...'}
           </div>
         </div>
       </AuthLayout>
@@ -528,12 +608,16 @@ export default function App() {
     return (
       <AuthLayout
         title="Email pendente de verificação"
-        subtitle="Confirme seu email para liberar o uso completo do app."
+        subtitle="Confirme seu email para liberar o acesso"
       >
         <ToneMessage item={message} />
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ fontSize: 13, color: '#5f7187' }}>
-            Conta: <strong>{session.user?.email || resendTargetEmail || 'não informada'}</strong>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 14, color: C.text1, textAlign: 'center' }}>
+            Enviamos um link para:
+            <br />
+            <strong style={{ color: C.text0 }}>
+              {session.user?.email || resendTargetEmail || 'não informada'}
+            </strong>
           </div>
           <Button type="button" onClick={handleResendVerification} disabled={busy}>
             {busy ? 'Enviando...' : 'Reenviar verificação'}
@@ -549,7 +633,7 @@ export default function App() {
             Já confirmei o email
           </Button>
           <Button type="button" variant="secondary" onClick={handleLogout} disabled={busy}>
-            Sair
+            Voltar para o Login
           </Button>
         </div>
       </AuthLayout>
@@ -557,114 +641,273 @@ export default function App() {
   }
 
   return (
-    <AuthLayout title="Acesse sua conta" subtitle="Login seguro com Supabase Auth + sessão via cookie httpOnly.">
+    <AuthLayout title="Acesse sua conta">
       <ToneMessage item={message} />
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Button type="button" variant={authMode === MODE.LOGIN ? 'primary' : 'secondary'} onClick={() => setAuthMode(MODE.LOGIN)}>
-          Login
-        </Button>
-        <Button type="button" variant={authMode === MODE.SIGNUP ? 'primary' : 'secondary'} onClick={() => setAuthMode(MODE.SIGNUP)}>
-          Cadastro
-        </Button>
-        <Button type="button" variant={authMode === MODE.FORGOT ? 'primary' : 'secondary'} onClick={() => setAuthMode(MODE.FORGOT)}>
-          Esqueci senha
-        </Button>
-      </div>
-
       {authMode === MODE.LOGIN ? (
-        <form onSubmit={handleLogin} style={{ display: 'grid', gap: 10 }}>
-          <Input
-            type="email"
-            placeholder="Email"
-            value={loginForm.email}
-            onChange={(event) =>
-              setLoginForm((previous) => ({ ...previous, email: normalizeEmailInput(event.target.value) }))
-            }
-            autoComplete="email"
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Senha"
-            value={loginForm.password}
-            onChange={(event) => setLoginForm((previous) => ({ ...previous, password: event.target.value }))}
-            autoComplete="current-password"
-            required
-          />
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Entrando...' : 'Entrar'}
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text1,
+                marginBottom: 6,
+              }}
+            >
+              Email
+            </label>
+            <Input
+              type="email"
+              placeholder="seu@email.com"
+              value={loginForm.email}
+              onChange={(event) =>
+                setLoginForm((previous) => ({
+                  ...previous,
+                  email: normalizeEmailInput(event.target.value),
+                }))
+              }
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: C.text1 }}>Senha</label>
+              <button
+                type="button"
+                onClick={() => setAuthMode(MODE.FORGOT)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: C.primary,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                Esqueceu a senha?
+              </button>
+            </div>
+            <Input
+              type="password"
+              placeholder="••••••••"
+              value={loginForm.password}
+              onChange={(event) =>
+                setLoginForm((previous) => ({ ...previous, password: event.target.value }))
+              }
+              autoComplete="current-password"
+              required
+            />
+          </div>
+          <Button type="submit" disabled={busy} style={{ marginTop: 8 }}>
+            {busy ? 'Entrando...' : 'Entrar na Plataforma'}
           </Button>
+          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.text2 }}>
+            Ainda não tem conta?{' '}
+            <button
+              type="button"
+              onClick={() => setAuthMode(MODE.SIGNUP)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: C.primary,
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Criar conta
+            </button>
+          </div>
         </form>
       ) : null}
 
       {authMode === MODE.SIGNUP ? (
-        <form onSubmit={handleSignup} style={{ display: 'grid', gap: 10 }}>
-          <Input
-            type="text"
-            placeholder="Nome"
-            value={signupForm.name}
-            onChange={(event) => setSignupForm((previous) => ({ ...previous, name: event.target.value }))}
-            autoComplete="name"
-            required
-          />
-          <Input
-            type="email"
-            placeholder="Email"
-            value={signupForm.email}
-            onChange={(event) =>
-              setSignupForm((previous) => ({ ...previous, email: normalizeEmailInput(event.target.value) }))
-            }
-            autoComplete="email"
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Senha"
-            value={signupForm.password}
-            onChange={(event) => setSignupForm((previous) => ({ ...previous, password: event.target.value }))}
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
-          <Button type="submit" disabled={busy}>
+        <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text1,
+                marginBottom: 6,
+              }}
+            >
+              Nome completo
+            </label>
+            <Input
+              type="text"
+              placeholder="Dr(a). Seu Nome"
+              value={signupForm.name}
+              onChange={(event) =>
+                setSignupForm((previous) => ({ ...previous, name: event.target.value }))
+              }
+              autoComplete="name"
+              required
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text1,
+                marginBottom: 6,
+              }}
+            >
+              Email
+            </label>
+            <Input
+              type="email"
+              placeholder="seu@email.com"
+              value={signupForm.email}
+              onChange={(event) =>
+                setSignupForm((previous) => ({
+                  ...previous,
+                  email: normalizeEmailInput(event.target.value),
+                }))
+              }
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text1,
+                marginBottom: 6,
+              }}
+            >
+              Senha
+            </label>
+            <Input
+              type="password"
+              placeholder="Mínimo de 8 caracteres"
+              value={signupForm.password}
+              onChange={(event) =>
+                setSignupForm((previous) => ({ ...previous, password: event.target.value }))
+              }
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={busy} style={{ marginTop: 8 }}>
             {busy ? 'Criando conta...' : 'Criar conta'}
           </Button>
+          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.text2 }}>
+            Já possui conta?{' '}
+            <button
+              type="button"
+              onClick={() => setAuthMode(MODE.LOGIN)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: C.primary,
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Fazer login
+            </button>
+          </div>
         </form>
       ) : null}
 
       {authMode === MODE.FORGOT ? (
-        <form onSubmit={handleForgotPassword} style={{ display: 'grid', gap: 10 }}>
-          <Input
-            type="email"
-            placeholder="Email"
-            value={forgotEmail}
-            onChange={(event) => setForgotEmail(normalizeEmailInput(event.target.value))}
-            autoComplete="email"
-            required
-          />
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Enviando...' : 'Enviar recuperação'}
+        <form
+          onSubmit={handleForgotPassword}
+          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+        >
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text1,
+                marginBottom: 6,
+              }}
+            >
+              Email para recuperação
+            </label>
+            <Input
+              type="email"
+              placeholder="seu@email.com"
+              value={forgotEmail}
+              onChange={(event) => setForgotEmail(normalizeEmailInput(event.target.value))}
+              autoComplete="email"
+              required
+            />
+          </div>
+          <Button type="submit" disabled={busy} style={{ marginTop: 8 }}>
+            {busy ? 'Enviando link...' : 'Enviar link de recuperação'}
           </Button>
+          <div style={{ textAlign: 'center', marginTop: 16, fontSize: 13, color: C.text2 }}>
+            Lembrou a senha?{' '}
+            <button
+              type="button"
+              onClick={() => setAuthMode(MODE.LOGIN)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: C.primary,
+                fontWeight: 600,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Voltar ao login
+            </button>
+          </div>
         </form>
       ) : null}
 
       {authMode === MODE.RESET ? (
-        <form onSubmit={handleResetPassword} style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-          <Input
-            type="password"
-            placeholder="Nova senha"
-            value={resetValue}
-            onChange={(event) => setResetValue(event.target.value)}
-            autoComplete="new-password"
-            minLength={8}
-            required
-          />
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Atualizando...' : 'Atualizar senha'}
+        <form
+          onSubmit={handleResetPassword}
+          style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+        >
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13,
+                fontWeight: 500,
+                color: C.text1,
+                marginBottom: 6,
+              }}
+            >
+              Nova senha
+            </label>
+            <Input
+              type="password"
+              placeholder="Mínimo de 8 caracteres"
+              value={resetValue}
+              onChange={(event) => setResetValue(event.target.value)}
+              autoComplete="new-password"
+              minLength={8}
+              required
+            />
+          </div>
+          <Button type="submit" disabled={busy} style={{ marginTop: 8 }}>
+            {busy ? 'Atualizando...' : 'Definir nova senha'}
           </Button>
-          <Button type="button" variant="secondary" onClick={() => setAuthMode(MODE.LOGIN)} disabled={busy}>
-            Voltar para login
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setAuthMode(MODE.LOGIN)}
+            disabled={busy}
+          >
+            Cancelar
           </Button>
         </form>
       ) : null}

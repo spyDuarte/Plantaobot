@@ -12,7 +12,11 @@ function buildRedirectUrl(appBaseUrl) {
 
 function createAnonClient(config) {
   if (!config.supabaseUrl || !config.supabaseAnonKey) {
-    throw createHttpError(500, 'SUPABASE_ENV_MISSING', 'Supabase auth env vars are not configured.');
+    throw createHttpError(
+      500,
+      'SUPABASE_ENV_MISSING',
+      'Supabase auth env vars are not configured.',
+    );
   }
 
   return createClient(config.supabaseUrl, config.supabaseAnonKey, {

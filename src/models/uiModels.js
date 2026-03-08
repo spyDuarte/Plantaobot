@@ -1,31 +1,38 @@
 function normalizeSeverity(severity) {
   if (!severity) {
-    return "info";
+    return 'info';
   }
 
   const normalized = String(severity).toLowerCase();
-  if (["success", "info", "warning", "error"].includes(normalized)) {
+  if (['success', 'info', 'warning', 'error'].includes(normalized)) {
     return normalized;
   }
 
-  if (normalized === "win") {
-    return "success";
+  if (normalized === 'win') {
+    return 'success';
   }
 
-  return "info";
+  return 'info';
 }
 
 function legacyType(severity) {
-  if (severity === "success") {
-    return "win";
+  if (severity === 'success') {
+    return 'win';
   }
-  if (severity === "error") {
-    return "error";
+  if (severity === 'error') {
+    return 'error';
   }
-  return "info";
+  return 'info';
 }
 
-export function createToast({ id, title, message, severity = "info", timestamp, source = "system" }) {
+export function createToast({
+  id,
+  title,
+  message,
+  severity = 'info',
+  timestamp,
+  source = 'system',
+}) {
   const normalizedSeverity = normalizeSeverity(severity);
   const resolvedTimestamp = timestamp || new Date().toISOString();
 
@@ -46,9 +53,9 @@ export function createNotification({
   id,
   title,
   message,
-  severity = "info",
+  severity = 'info',
   timestamp,
-  source = "bot",
+  source = 'bot',
 }) {
   const normalizedSeverity = normalizeSeverity(severity);
   const resolvedTimestamp = timestamp || new Date().toISOString();

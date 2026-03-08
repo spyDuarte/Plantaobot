@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { C, reducedMotion } from "../constants/colors.js";
-import { fmt, calcScore } from "../utils/index.js";
-import { Button, Card, Pill, RivalRace, ScBar } from "./ui/index.jsx";
+import { useEffect, useState } from 'react';
+import { C, reducedMotion } from '../constants/colors.js';
+import { fmt, calcScore } from '../utils/index.js';
+import { Button, Card, Pill, RivalRace, ScBar } from './ui/index.jsx';
 
 export default function ShiftModal({ shift, prefs, onClose, onAccept, captured = [] }) {
   useEffect(() => {
@@ -10,13 +10,13 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
     }
 
     function onKeyDown(event) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         onClose();
       }
     }
 
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, [shift, onClose]);
 
   const [accepting, setAccepting] = useState(false);
@@ -46,14 +46,14 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
     <div
       role="presentation"
       style={{
-        position: "fixed",
+        position: 'fixed',
         inset: 0,
-        background: "rgba(16, 36, 59, 0.45)",
-        backdropFilter: "blur(6px)",
+        background: 'rgba(16, 36, 59, 0.45)',
+        backdropFilter: 'blur(6px)',
         zIndex: 9300,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: 14,
       }}
       onClick={onClose}
@@ -63,10 +63,21 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
         aria-modal="true"
         aria-label={shift.hospital}
         onClick={(event) => event.stopPropagation()}
-        style={{ width: "100%", maxWidth: 500, animation: reducedMotion ? "none" : "modalUp .2s both" }}
+        style={{
+          width: '100%',
+          maxWidth: 500,
+          animation: reducedMotion ? 'none' : 'modalUp .2s both',
+        }}
       >
-        <Card style={{ maxHeight: "90vh", overflowY: "auto" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <Card style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: 10,
+            }}
+          >
             <div>
               <div style={{ fontSize: 18, fontWeight: 700 }}>{shift.hospital}</div>
               <div style={{ marginTop: 2, fontSize: 12, color: C.text2 }}>{shift.group}</div>
@@ -76,16 +87,31 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
             </Button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 7, marginBottom: 10 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: 7,
+              marginBottom: 10,
+            }}
+          >
             {[
-              ["Valor", `R$ ${fmt(shift.val)}`],
-              ["Duracao", shift.hours],
-              ["Data", shift.date],
-              ["Distancia", `${shift.dist} km`],
-              ["Especialidade", shift.spec],
-              ["Local", shift.loc],
+              ['Valor', `R$ ${fmt(shift.val)}`],
+              ['Duracao', shift.hours],
+              ['Data', shift.date],
+              ['Distancia', `${shift.dist} km`],
+              ['Especialidade', shift.spec],
+              ['Local', shift.loc],
             ].map(([label, value]) => (
-              <div key={label} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px", background: C.surface2 }}>
+              <div
+                key={label}
+                style={{
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 10,
+                  padding: '8px 10px',
+                  background: C.surface2,
+                }}
+              >
                 <div style={{ fontSize: 11, color: C.text2 }}>{label}</div>
                 <div style={{ marginTop: 2, fontSize: 12, fontWeight: 600 }}>{value}</div>
               </div>
@@ -93,17 +119,43 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
           </div>
 
           <Card muted style={{ marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
               <strong style={{ fontSize: 13 }}>Compatibilidade</strong>
-              <span className="pb-mono" style={{ fontSize: 24, fontWeight: 700, color: scoreColor }}>
+              <span
+                className="pb-mono"
+                style={{ fontSize: 24, fontWeight: 700, color: scoreColor }}
+              >
                 {score}%
               </span>
             </div>
             <ScBar sc={score} h={6} />
-            <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {result.r.map((reason, index) => (
-                <div key={`${reason.l}-${index}`} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: reason.ok ? C.success : C.error }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: reason.ok ? C.success : C.error }} />
+                <div
+                  key={`${reason.l}-${index}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 7,
+                    fontSize: 12,
+                    color: reason.ok ? C.success : C.error,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: '50%',
+                      background: reason.ok ? C.success : C.error,
+                    }}
+                  />
                   {reason.l}
                 </div>
               ))}
@@ -114,12 +166,21 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
 
           <Card muted style={{ marginTop: 10 }}>
             <div style={{ marginBottom: 6, fontSize: 11, color: C.text2 }}>Mensagem original</div>
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap", fontSize: 11, lineHeight: 1.5, color: C.text1, fontFamily: "'IBM Plex Mono', monospace" }}>
+            <pre
+              style={{
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                fontSize: 11,
+                lineHeight: 1.5,
+                color: C.text1,
+                fontFamily: "'IBM Plex Mono', monospace",
+              }}
+            >
               {shift.rawMsg}
             </pre>
           </Card>
 
-          <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             <Button type="button" variant="secondary" onClick={onClose} disabled={accepting}>
               Fechar
             </Button>
@@ -134,7 +195,7 @@ export default function ShiftModal({ shift, prefs, onClose, onAccept, captured =
                 disabled={accepting}
                 aria-busy={accepting}
               >
-                {accepting ? "Aceitando..." : "Aceitar plantao"}
+                {accepting ? 'Aceitando...' : 'Aceitar plantao'}
               </Button>
             )}
           </div>

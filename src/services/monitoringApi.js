@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestOrNull } from "./apiClient.js";
+import { apiRequest, apiRequestOrNull } from './apiClient.js';
 import {
   fetchCapturedFromSupabase,
   captureOfferToSupabase,
@@ -14,14 +14,14 @@ import {
   startMonitoringInSupabase,
   stopMonitoringInSupabase,
   fetchFeedFromSupabase,
-} from "./supabaseDataService.js";
+} from './supabaseDataService.js';
 
-const DATA_PROVIDER = String(import.meta.env.VITE_DATA_PROVIDER || "bff").toLowerCase();
+const DATA_PROVIDER = String(import.meta.env.VITE_DATA_PROVIDER || 'bff').toLowerCase();
 
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 function pad(value) {
-  return String(value).padStart(2, "0");
+  return String(value).padStart(2, '0');
 }
 
 function toDateInstance(input) {
@@ -40,7 +40,7 @@ function toDateInstance(input) {
 function buildDateLabel(date) {
   const instance = toDateInstance(date);
   if (!instance) {
-    return "";
+    return '';
   }
 
   const dayName = DAY_LABELS[instance.getDay()];
@@ -59,16 +59,16 @@ function buildHourLabel(startAt, endAt, durationHours) {
     return `${diffHours}h`;
   }
 
-  return "-";
+  return '-';
 }
 
 function formatTimeLabel(input) {
   const instance = toDateInstance(input);
   if (!instance) {
-    return "";
+    return '';
   }
 
-  return instance.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return instance.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function normalizeShift(raw, { isOffer = true } = {}) {
@@ -76,25 +76,31 @@ function normalizeShift(raw, { isOffer = true } = {}) {
     return null;
   }
 
-  const id = raw.id ?? raw.offerId ?? raw.shiftId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const sender = raw.sender ?? raw.senderName ?? raw.origin ?? "Sistema";
+  const id =
+    raw.id ??
+    raw.offerId ??
+    raw.shiftId ??
+    `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const sender = raw.sender ?? raw.senderName ?? raw.origin ?? 'Sistema';
 
   return {
     id,
-    group: raw.group ?? raw.groupName ?? "Grupo não informado",
+    group: raw.group ?? raw.groupName ?? 'Grupo não informado',
     sender,
-    av: raw.av ?? raw.avatar ?? (sender.charAt(0).toUpperCase() || "S"),
-    hospital: raw.hospital ?? raw.facility ?? raw.locationName ?? "Unidade não informada",
-    spec: raw.spec ?? raw.specialty ?? "Clínica Geral",
+    av: raw.av ?? raw.avatar ?? (sender.charAt(0).toUpperCase() || 'S'),
+    hospital: raw.hospital ?? raw.facility ?? raw.locationName ?? 'Unidade não informada',
+    spec: raw.spec ?? raw.specialty ?? 'Clínica Geral',
     val: Number(raw.val ?? raw.value ?? raw.price ?? 0),
     date: raw.date ?? raw.dateLabel ?? buildDateLabel(raw.startAt ?? raw.datetime),
     hours: raw.hours ?? buildHourLabel(raw.startAt, raw.endAt, raw.durationHours),
-    loc: raw.loc ?? raw.location ?? raw.city ?? "Local não informado",
+    loc: raw.loc ?? raw.location ?? raw.city ?? 'Local não informado',
     dist: Number(raw.dist ?? raw.distanceKm ?? raw.distance ?? 0),
-    rawMsg: raw.rawMsg ?? raw.message ?? raw.description ?? "",
+    rawMsg: raw.rawMsg ?? raw.message ?? raw.description ?? '',
     rivals: raw.rivals ?? [],
-    ts: (raw.ts ?? formatTimeLabel(raw.createdAt ?? raw.timestamp ?? raw.receivedAt)) || formatTimeLabel(new Date()),
-    state: raw.state ?? "done",
+    ts:
+      (raw.ts ?? formatTimeLabel(raw.createdAt ?? raw.timestamp ?? raw.receivedAt)) ||
+      formatTimeLabel(new Date()),
+    state: raw.state ?? 'done',
     sc: raw.sc ?? raw.score,
     ok: raw.ok,
     isOffer,
@@ -120,11 +126,11 @@ function normalizeList(payload, normalizer) {
 }
 
 export async function fetchMonitorStatus() {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return fetchMonitorStatusFromSupabase();
   }
 
-  const data = await apiRequestOrNull("/monitor/status");
+  const data = await apiRequestOrNull('/monitor/status');
   if (!data) {
     return { active: false, sessionId: null };
   }
@@ -136,7 +142,7 @@ export async function fetchMonitorStatus() {
 }
 
 export async function startMonitoring({ groups, prefs, operatorName }) {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return startMonitoringInSupabase({ groups, prefs, operatorName });
   }
 
@@ -150,8 +156,8 @@ export async function startMonitoring({ groups, prefs, operatorName }) {
     operatorName,
   };
 
-  const data = await apiRequest("/monitor/start", {
-    method: "POST",
+  const data = await apiRequest('/monitor/start', {
+    method: 'POST',
     body: payload,
   });
 
@@ -161,22 +167,22 @@ export async function startMonitoring({ groups, prefs, operatorName }) {
 }
 
 export async function stopMonitoring(sessionId) {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return stopMonitoringInSupabase(sessionId);
   }
 
-  await apiRequest("/monitor/stop", {
-    method: "POST",
+  await apiRequest('/monitor/stop', {
+    method: 'POST',
     body: { sessionId },
   });
 }
 
 export async function fetchFeed({ cursor, sessionId, groupIds }) {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return fetchFeedFromSupabase({ cursor, sessionId, groupIds });
   }
 
-  const data = await apiRequest("/monitor/feed", {
+  const data = await apiRequest('/monitor/feed', {
     query: {
       cursor,
       sessionId,
@@ -197,30 +203,30 @@ export async function fetchFeed({ cursor, sessionId, groupIds }) {
 }
 
 export async function fetchCapturedOffers() {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return fetchCapturedFromSupabase();
   }
 
-  const data = await apiRequestOrNull("/captures");
+  const data = await apiRequestOrNull('/captures');
   return normalizeList(data, (item) => normalizeShift(item, { isOffer: true }));
 }
 
 export async function fetchRejectedOffers() {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return fetchRejectedFromSupabase();
   }
 
-  const data = await apiRequestOrNull("/rejections");
+  const data = await apiRequestOrNull('/rejections');
   return normalizeList(data, (item) => normalizeShift(item, { isOffer: true }));
 }
 
-export async function captureOffer(shift, { sessionId, source = "manual" } = {}) {
-  if (DATA_PROVIDER === "supabase") {
+export async function captureOffer(shift, { sessionId, source = 'manual' } = {}) {
+  if (DATA_PROVIDER === 'supabase') {
     return captureOfferToSupabase(shift, { sessionId, source });
   }
 
-  const data = await apiRequest("/captures", {
-    method: "POST",
+  const data = await apiRequest('/captures', {
+    method: 'POST',
     body: {
       sessionId,
       source,
@@ -243,13 +249,13 @@ export async function captureOffer(shift, { sessionId, source = "manual" } = {})
   return normalizeShift(data?.item ?? data, { isOffer: true }) || shift;
 }
 
-export async function rejectOffer(shift, { sessionId, reason = "not_match" } = {}) {
-  if (DATA_PROVIDER === "supabase") {
+export async function rejectOffer(shift, { sessionId, reason = 'not_match' } = {}) {
+  if (DATA_PROVIDER === 'supabase') {
     return rejectOfferToSupabase(shift, { sessionId, reason });
   }
 
-  const data = await apiRequestOrNull("/rejections", {
-    method: "POST",
+  const data = await apiRequestOrNull('/rejections', {
+    method: 'POST',
     body: {
       sessionId,
       reason,
@@ -273,11 +279,11 @@ export async function rejectOffer(shift, { sessionId, reason = "not_match" } = {
 }
 
 export async function fetchPreferences() {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return fetchPreferencesFromSupabase();
   }
 
-  const data = await apiRequestOrNull("/preferences");
+  const data = await apiRequestOrNull('/preferences');
   if (!data) {
     return null;
   }
@@ -286,22 +292,22 @@ export async function fetchPreferences() {
 }
 
 export async function savePreferences(preferences) {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return savePreferencesToSupabase(preferences);
   }
 
-  await apiRequest("/preferences", {
-    method: "PUT",
+  await apiRequest('/preferences', {
+    method: 'PUT',
     body: { preferences },
   });
 }
 
 export async function fetchGroups() {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return fetchGroupsFromSupabase();
   }
 
-  const data = await apiRequestOrNull("/groups");
+  const data = await apiRequestOrNull('/groups');
   if (!data) {
     return null;
   }
@@ -313,20 +319,20 @@ export async function fetchGroups() {
 
   return groups.map((group, index) => ({
     id: group.id ?? index + 1,
-    name: group.name ?? "Grupo",
+    name: group.name ?? 'Grupo',
     members: Number(group.members ?? group.membersCount ?? 0),
     active: Boolean(group.active),
-    emoji: group.emoji ?? "🏥",
+    emoji: group.emoji ?? '🏥',
   }));
 }
 
 export async function saveGroups(groups) {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     return saveGroupsToSupabase(groups);
   }
 
-  await apiRequest("/groups", {
-    method: "PUT",
+  await apiRequest('/groups', {
+    method: 'PUT',
     body: {
       groups: groups.map((group) => ({
         id: group.id,
@@ -340,13 +346,13 @@ export async function saveGroups(groups) {
 }
 
 export async function clearHistory() {
-  if (DATA_PROVIDER === "supabase") {
+  if (DATA_PROVIDER === 'supabase') {
     await Promise.all([deleteAllCapturesFromSupabase(), deleteAllRejectionsFromSupabase()]);
     return;
   }
 
-  const result = await apiRequestOrNull("/history", {
-    method: "DELETE",
+  const result = await apiRequestOrNull('/history', {
+    method: 'DELETE',
   });
 
   if (result !== null) {
@@ -354,9 +360,7 @@ export async function clearHistory() {
   }
 
   await Promise.all([
-    apiRequestOrNull("/captures", { method: "DELETE" }),
-    apiRequestOrNull("/rejections", { method: "DELETE" }),
+    apiRequestOrNull('/captures', { method: 'DELETE' }),
+    apiRequestOrNull('/rejections', { method: 'DELETE' }),
   ]);
 }
-
-

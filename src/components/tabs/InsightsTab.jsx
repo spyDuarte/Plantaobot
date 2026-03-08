@@ -1,15 +1,15 @@
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { C } from "../../constants/colors.js";
-import { fmt } from "../../utils/index.js";
-import { Badge, Card, PageHeader } from "../ui/index.jsx";
-import InsightsPanel from "../InsightsPanel.jsx";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { C } from '../../constants/colors.js';
+import { fmt } from '../../utils/index.js';
+import { Badge, Card, PageHeader } from '../ui/index.jsx';
+import InsightsPanel from '../InsightsPanel.jsx';
 
 export default function InsightsTab({ uiV2, captured, rejected, prefs, monthly, projM }) {
   const totalYear = projM * 12;
   const monthlyTotal = monthly.reduce((sum, entry) => sum + entry.v, 0);
 
   return (
-    <div style={{ animation: "fadeUp .25s both" }}>
+    <div style={{ animation: 'fadeUp .25s both' }}>
       {uiV2 ? (
         <PageHeader
           title="Insights financeiros"
@@ -22,7 +22,10 @@ export default function InsightsTab({ uiV2, captured, rejected, prefs, monthly, 
 
       <Card style={{ marginTop: 12 }}>
         <div style={{ fontSize: 11, color: C.text2, marginBottom: 4 }}>Historico mensal</div>
-        <div className="pb-mono" style={{ fontSize: 27, fontWeight: 700, color: C.primary, marginBottom: 10 }}>
+        <div
+          className="pb-mono"
+          style={{ fontSize: 27, fontWeight: 700, color: C.primary, marginBottom: 10 }}
+        >
           R$ {fmt(monthlyTotal)}
         </div>
         <ResponsiveContainer width="100%" height={140}>
@@ -33,22 +36,35 @@ export default function InsightsTab({ uiV2, captured, rejected, prefs, monthly, 
                 <stop offset="95%" stopColor={C.primary} stopOpacity={0.04} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="m" tick={{ fill: C.text2, fontSize: 11 }} axisLine={false} tickLine={false} />
+            <XAxis
+              dataKey="m"
+              tick={{ fill: C.text2, fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
             <YAxis hide />
             <Tooltip
               contentStyle={{
                 borderRadius: 10,
                 border: `1px solid ${C.border}`,
-                boxShadow: "0 8px 16px rgba(16, 36, 59, 0.12)",
+                boxShadow: '0 8px 16px rgba(16, 36, 59, 0.12)',
               }}
               formatter={(value) => [`R$ ${fmt(value)}`]}
             />
-            <Area type="monotone" dataKey="v" stroke={C.primary} strokeWidth={2.4} fill="url(#insightFill)" />
+            <Area
+              type="monotone"
+              dataKey="v"
+              stroke={C.primary}
+              strokeWidth={2.4}
+              fill="url(#insightFill)"
+            />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
 
-      <Card style={{ marginTop: 12, background: C.primarySoft, borderColor: "rgba(11,95,255,0.28)" }}>
+      <Card
+        style={{ marginTop: 12, background: C.primarySoft, borderColor: 'rgba(11,95,255,0.28)' }}
+      >
         <div style={{ fontSize: 11, color: C.text2, marginBottom: 4 }}>Projecao anual</div>
         <div className="pb-mono" style={{ fontSize: 31, fontWeight: 700, color: C.primary }}>
           R$ {fmt(totalYear)}

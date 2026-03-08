@@ -28,7 +28,9 @@ describe('App auth gate', () => {
   });
 
   it('renders login gate when /auth/me returns 401', async () => {
-    authApi.fetchMe.mockRejectedValue(new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }));
+    authApi.fetchMe.mockRejectedValue(
+      new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }),
+    );
 
     render(<App />);
 
@@ -36,7 +38,7 @@ describe('App auth gate', () => {
       expect(screen.getByText('Acesse sua conta')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entrar na Plataforma' })).toBeInTheDocument();
   });
 
   it('renders main app when user session is valid', async () => {
@@ -71,23 +73,24 @@ describe('App auth gate', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Atualizar senha' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Definir nova senha' })).toBeInTheDocument();
     });
   });
 
-
   it('blocks login submit with invalid email before calling API', async () => {
-    authApi.fetchMe.mockRejectedValue(new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }));
+    authApi.fetchMe.mockRejectedValue(
+      new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }),
+    );
 
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Entrar na Plataforma' })).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'invalido' } });
-    fireEvent.change(screen.getByPlaceholderText('Senha'), { target: { value: 'Senha123' } });
-    const loginForm = screen.getByPlaceholderText('Email').closest('form');
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'invalido' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Senha123' } });
+    const loginForm = screen.getByPlaceholderText('seu@email.com').closest('form');
     fireEvent.submit(loginForm);
 
     await waitFor(() => {
@@ -98,23 +101,29 @@ describe('App auth gate', () => {
   });
 
   it('shows validation warning when resend verification has no valid email', async () => {
-    authApi.fetchMe.mockRejectedValue(new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }));
-    authApi.login.mockRejectedValue(new ApiError('Email não verificado.', { status: 403, path: '/auth/login' }));
+    authApi.fetchMe.mockRejectedValue(
+      new ApiError('Sessão inválida.', { status: 401, path: '/auth/me' }),
+    );
+    authApi.login.mockRejectedValue(
+      new ApiError('Email não verificado.', { status: 403, path: '/auth/login' }),
+    );
 
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Entrar na Plataforma' })).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'sem-arroba' } });
-    fireEvent.change(screen.getByPlaceholderText('Senha'), { target: { value: 'Senha123' } });
-    let loginForm = screen.getByPlaceholderText('Email').closest('form');
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), { target: { value: 'sem-arroba' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'Senha123' } });
+    let loginForm = screen.getByPlaceholderText('seu@email.com').closest('form');
     fireEvent.submit(loginForm);
 
     // Ajusta para credenciais válidas para simular conta não verificada e entrar na tela correta
-    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'med@example.com' } });
-    loginForm = screen.getByPlaceholderText('Email').closest('form');
+    fireEvent.change(screen.getByPlaceholderText('seu@email.com'), {
+      target: { value: 'med@example.com' },
+    });
+    loginForm = screen.getByPlaceholderText('seu@email.com').closest('form');
     fireEvent.submit(loginForm);
 
     await waitFor(() => {
@@ -143,7 +152,9 @@ describe('App auth gate', () => {
     });
 
     act(() => {
-      window.dispatchEvent(new CustomEvent('pb-auth-unauthorized', { detail: { path: '/monitor/status' } }));
+      window.dispatchEvent(
+        new CustomEvent('pb-auth-unauthorized', { detail: { path: '/monitor/status' } }),
+      );
     });
 
     await waitFor(() => {
@@ -151,4 +162,3 @@ describe('App auth gate', () => {
     });
   });
 });
-
