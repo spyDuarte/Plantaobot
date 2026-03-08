@@ -10,14 +10,14 @@ The entire application lives in a single file: **`plantaobot_6.jsx`** (~1,022 li
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | React 18 + Hooks |
-| Charts | Recharts |
-| Build | Vite (not included in repo) |
-| Styling | Inline styles only (glassmorphism design system) |
-| Language | Portuguese (pt-BR) |
-| Tests | None currently |
+| Layer     | Technology                                       |
+| --------- | ------------------------------------------------ |
+| Framework | React 18 + Hooks                                 |
+| Charts    | Recharts                                         |
+| Build     | Vite (not included in repo)                      |
+| Styling   | Inline styles only (glassmorphism design system) |
+| Language  | Portuguese (pt-BR)                               |
+| Tests     | None currently                                   |
 
 ---
 
@@ -42,21 +42,22 @@ npm run dev
 
 ## Key Internal Architecture
 
-| Symbol | Location | Purpose |
-|--------|----------|---------|
-| `C` | Lines 14–16 | Design token color palette (glassmorphism) |
-| `SHIFTS`, `NOISE`, `GROUPS`, `MONTHLY`, `CAL` | Lines 26–45 | All hardcoded mock data |
-| `fmt()`, `nowT()` | Lines 20–21 | Pure date/time utility functions |
-| `calcScore()` | Lines 47–59 | Pure scoring function — evaluates shift offers |
-| Micro-components | Lines 64–178 | `Av`, `Toggle`, `GlassCard`, `Pill`, `Waveform`, `Confetti`, `BgOrbs` |
-| `ShiftCard` | Lines 181–224 | Modal for shift detail + accept/reject |
-| `SwipeCard` | Lines 251–301 | Swipeable shift card (touch + mouse) |
-| `InsightsPanel` | Lines 380–449 | Recharts-based financial dashboard |
-| `AIChat` | Lines 312–378 | Chat panel (calls Anthropic API directly — see security note) |
-| `App` | Lines 453–993 | God component: all state, routing, bot simulation, tab views |
-| Bot simulation | Lines 491–523 | Fake message stream using `setTimeout` |
+| Symbol                                        | Location      | Purpose                                                               |
+| --------------------------------------------- | ------------- | --------------------------------------------------------------------- |
+| `C`                                           | Lines 14–16   | Design token color palette (glassmorphism)                            |
+| `SHIFTS`, `NOISE`, `GROUPS`, `MONTHLY`, `CAL` | Lines 26–45   | All hardcoded mock data                                               |
+| `fmt()`, `nowT()`                             | Lines 20–21   | Pure date/time utility functions                                      |
+| `calcScore()`                                 | Lines 47–59   | Pure scoring function — evaluates shift offers                        |
+| Micro-components                              | Lines 64–178  | `Av`, `Toggle`, `GlassCard`, `Pill`, `Waveform`, `Confetti`, `BgOrbs` |
+| `ShiftCard`                                   | Lines 181–224 | Modal for shift detail + accept/reject                                |
+| `SwipeCard`                                   | Lines 251–301 | Swipeable shift card (touch + mouse)                                  |
+| `InsightsPanel`                               | Lines 380–449 | Recharts-based financial dashboard                                    |
+| `AIChat`                                      | Lines 312–378 | Chat panel (calls Anthropic API directly — see security note)         |
+| `App`                                         | Lines 453–993 | God component: all state, routing, bot simulation, tab views          |
+| Bot simulation                                | Lines 491–523 | Fake message stream using `setTimeout`                                |
 
 ### Tab Views (all rendered inline inside `App`)
+
 - `tab === 'dash'` — Dashboard with stats and quick actions
 - `tab === 'feed'` — Live feed of shift offers from groups
 - `tab === 'swipe'` — Manual swipe-to-accept review mode
@@ -215,15 +216,15 @@ The following issues were identified by code analysis. Tackle them in priority o
 
 ## Known Issues (Quick Reference)
 
-| Issue | Location | Severity |
-|-------|----------|---------|
-| API key exposed client-side | Line 330 | Critical |
-| Accept button does nothing | Line 220 | High |
-| No input validation | Lines 380, 547 | High |
-| All data is hardcoded mock | Lines 26–45 | High |
-| 20+ useState in single component | Lines 454–473 | High |
-| No localStorage persistence | Throughout | Medium |
-| No tests | — | Medium |
-| Timer leak risk on unmount | Lines 475–478 | Medium |
-| No ARIA labels | Multiple | Medium |
-| Animations ignore prefers-reduced-motion | Lines 149–154, 441–447 | Low |
+| Issue                                    | Location               | Severity |
+| ---------------------------------------- | ---------------------- | -------- |
+| API key exposed client-side              | Line 330               | Critical |
+| Accept button does nothing               | Line 220               | High     |
+| No input validation                      | Lines 380, 547         | High     |
+| All data is hardcoded mock               | Lines 26–45            | High     |
+| 20+ useState in single component         | Lines 454–473          | High     |
+| No localStorage persistence              | Throughout             | Medium   |
+| No tests                                 | —                      | Medium   |
+| Timer leak risk on unmount               | Lines 475–478          | Medium   |
+| No ARIA labels                           | Multiple               | Medium   |
+| Animations ignore prefers-reduced-motion | Lines 149–154, 441–447 | Low      |

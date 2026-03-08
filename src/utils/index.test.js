@@ -36,7 +36,7 @@ describe('utils', () => {
 
     expect(s).toBe(100);
     expect(r).toHaveLength(4);
-    expect(r.every(item => item.ok)).toBe(true);
+    expect(r.every((item) => item.ok)).toBe(true);
   });
 
   it('calcScore suporta data ISO para identificar dia da semana', () => {
@@ -78,6 +78,6 @@ describe('utils', () => {
 
     expect(s).toBe(0);
     expect(r).toHaveLength(4);
-    expect(r.every(item => !item.ok)).toBe(true);
+    expect(r.every((item) => !item.ok)).toBe(true);
   });
 });

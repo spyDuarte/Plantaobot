@@ -16,7 +16,8 @@ export function toErrorPayload(error) {
   const status = Number.isInteger(error?.status) ? error.status : 500;
   const payload = {
     error: typeof error?.code === 'string' ? error.code : 'INTERNAL_ERROR',
-    message: status >= 500 ? 'Unexpected server error.' : error?.message || 'Unexpected request error.',
+    message:
+      status >= 500 ? 'Unexpected server error.' : error?.message || 'Unexpected request error.',
   };
 
   if (error?.details !== undefined) {
@@ -42,7 +43,9 @@ export function normalizeAuthError(error) {
     return createHttpError(401, 'INVALID_CREDENTIALS', 'Email ou senha inválidos.');
   }
 
-  if (includesAny(message, ['email not confirmed', 'email not verified', 'email is not confirmed'])) {
+  if (
+    includesAny(message, ['email not confirmed', 'email not verified', 'email is not confirmed'])
+  ) {
     return createHttpError(403, 'EMAIL_NOT_CONFIRMED', 'Confirme seu e-mail antes de continuar.');
   }
 
@@ -55,7 +58,11 @@ export function normalizeAuthError(error) {
   }
 
   if (includesAny(message, ['weak password', 'password should be'])) {
-    return createHttpError(422, 'WEAK_PASSWORD', 'A senha informada não atende ao mínimo de segurança.');
+    return createHttpError(
+      422,
+      'WEAK_PASSWORD',
+      'A senha informada não atende ao mínimo de segurança.',
+    );
   }
 
   return createHttpError(401, 'AUTH_FAILED', message);

@@ -153,17 +153,11 @@ function dispatchUnauthorized(path) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const {
-    method: rawMethod = 'GET',
-    body,
-    query,
-    headers,
-    signal,
-  } = options;
+  const { method: rawMethod = 'GET', body, query, headers, signal } = options;
 
   const method = String(rawMethod).toUpperCase();
   const isMutating = MUTATING_METHODS.has(method);
-  const csrfToken = isMutating ? (getCsrfToken() || (await primeCsrfCookie())) : '';
+  const csrfToken = isMutating ? getCsrfToken() || (await primeCsrfCookie()) : '';
 
   const url = buildUrl(path, query);
   const response = await fetch(url, {

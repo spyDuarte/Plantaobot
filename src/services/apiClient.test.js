@@ -23,7 +23,9 @@ describe('apiClient auth/csrf behavior', () => {
   it('sends credentials include and csrf header for mutating requests', async () => {
     document.cookie = 'pb_csrf=test-csrf';
 
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse({ ok: true }));
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ ok: true }));
 
     await apiRequest('/captures', {
       method: 'POST',
@@ -41,7 +43,9 @@ describe('apiClient auth/csrf behavior', () => {
   it('respects existing lowercase content-type and csrf headers', async () => {
     document.cookie = 'pb_csrf=test-csrf';
 
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(jsonResponse({ ok: true }));
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ ok: true }));
 
     await apiRequest('/captures', {
       method: 'POST',
@@ -82,9 +86,9 @@ describe('apiClient auth/csrf behavior', () => {
   });
 
   it('dispatches unauthorized event for protected non-auth endpoints', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      jsonResponse({ message: 'Sessão inválida.' }, 401),
-    );
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ message: 'Sessão inválida.' }, 401));
 
     const handler = vi.fn();
     window.addEventListener('pb-auth-unauthorized', handler);

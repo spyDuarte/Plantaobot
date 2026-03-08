@@ -1,20 +1,29 @@
-export const SPECS = ["Clínica Geral", "Emergência", "UTI", "Pediatria", "Cardiologia", "Ortopedia", "Neurologia", "Psiquiatria"];
-export const DAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+export const SPECS = [
+  'Clínica Geral',
+  'Emergência',
+  'UTI',
+  'Pediatria',
+  'Cardiologia',
+  'Ortopedia',
+  'Neurologia',
+  'Psiquiatria',
+];
+export const DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 export const MONTHLY = [
-  { m: "Out", v: 9200 },
-  { m: "Nov", v: 12400 },
-  { m: "Dez", v: 8800 },
-  { m: "Jan", v: 15600 },
-  { m: "Fev", v: 11200 },
-  { m: "Mar", v: 0 },
+  { m: 'Out', v: 9200 },
+  { m: 'Nov', v: 12400 },
+  { m: 'Dez', v: 8800 },
+  { m: 'Jan', v: 15600 },
+  { m: 'Fev', v: 11200 },
+  { m: 'Mar', v: 0 },
 ];
 
 export const GROUPS = [
-  { id: 1, name: "Plantões SP Centro", members: 342, active: true, emoji: "🏥" },
-  { id: 2, name: "Médicos ABC Paulista", members: 218, active: true, emoji: "🩺" },
-  { id: 3, name: "Oportunidades Médicas SP", members: 567, active: true, emoji: "📋" },
-  { id: 4, name: "Vagas UTI Sul SP", members: 89, active: false, emoji: "❤️" },
+  { id: 1, name: 'Plantões SP Centro', members: 342, active: true, emoji: '🏥' },
+  { id: 2, name: 'Médicos ABC Paulista', members: 218, active: true, emoji: '🩺' },
+  { id: 3, name: 'Oportunidades Médicas SP', members: 567, active: true, emoji: '📋' },
+  { id: 4, name: 'Vagas UTI Sul SP', members: 89, active: false, emoji: '❤️' },
 ];
 
 export const CAL = [

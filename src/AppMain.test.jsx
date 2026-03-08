@@ -18,7 +18,6 @@ const clearAllHistoryHookMock = vi.fn();
 const resetProcessQueueHookMock = vi.fn();
 const registerCaptureHookMock = vi.fn();
 
-
 const handleFeedItemsHookMock = vi.fn();
 const acceptPendingHookMock = vi.fn();
 const rejectPendingHookMock = vi.fn();
@@ -99,7 +98,9 @@ vi.mock('./components/ui/index.jsx', () => ({
   ToastViewport: () => <div data-testid="toast-viewport" />,
   Badge: ({ children }) => <span>{children}</span>,
   Button: ({ children, onClick, type = 'button' }) => (
-    <button type={type} onClick={onClick}>{children}</button>
+    <button type={type} onClick={onClick}>
+      {children}
+    </button>
   ),
   Card: ({ children }) => <div>{children}</div>,
   EmptyState: ({ title, description, action }) => (
@@ -115,8 +116,12 @@ vi.mock('./components/ui/index.jsx', () => ({
 vi.mock('./components/layout/AppShell.jsx', () => ({
   default: ({ children, onStartBot, onStopBot }) => (
     <div>
-      <button type="button" onClick={onStartBot}>start-bot</button>
-      <button type="button" onClick={onStopBot}>stop-bot</button>
+      <button type="button" onClick={onStartBot}>
+        start-bot
+      </button>
+      <button type="button" onClick={onStopBot}>
+        stop-bot
+      </button>
       {children}
     </div>
   ),
@@ -125,8 +130,12 @@ vi.mock('./components/layout/AppShell.jsx', () => ({
 vi.mock('./components/ShiftModal.jsx', () => ({
   default: ({ onAccept, onClose, shift }) => (
     <div>
-      <button type="button" onClick={() => onAccept(shift)}>modal-accept</button>
-      <button type="button" onClick={onClose}>modal-close</button>
+      <button type="button" onClick={() => onAccept(shift)}>
+        modal-accept
+      </button>
+      <button type="button" onClick={onClose}>
+        modal-close
+      </button>
     </div>
   ),
 }));
@@ -141,7 +150,9 @@ vi.mock('./components/Onboarding.jsx', () => ({
 
 vi.mock('./components/tabs/Dashboard.jsx', () => ({
   default: ({ setModal }) => (
-    <button type="button" onClick={() => setModal(mockShift)}>open-modal</button>
+    <button type="button" onClick={() => setModal(mockShift)}>
+      open-modal
+    </button>
   ),
 }));
 
@@ -152,15 +163,14 @@ vi.mock('./components/tabs/InsightsTab.jsx', () => ({ default: () => <div>insigh
 vi.mock('./components/tabs/SettingsTab.jsx', () => ({
   default: ({ setPrefs, setGroups }) => (
     <div>
-      <button
-        type="button"
-        onClick={() => setPrefs((previous) => ({ ...previous, minVal: 2100 }))}
-      >
+      <button type="button" onClick={() => setPrefs((previous) => ({ ...previous, minVal: 2100 }))}>
         update-prefs
       </button>
       <button
         type="button"
-        onClick={() => setGroups((previous) => previous.map((item) => ({ ...item, active: !item.active })))}
+        onClick={() =>
+          setGroups((previous) => previous.map((item) => ({ ...item, active: !item.active })))
+        }
       >
         update-groups
       </button>
@@ -177,8 +187,16 @@ describe('AppMain critical flows', () => {
     window.localStorage.clear();
     window.localStorage.setItem('pb_screen', JSON.stringify('app'));
 
-    fetchPreferencesMock.mockResolvedValue({ minVal: 1800, maxDist: 15, days: ['Sex'], specs: ['UTI'], auto: true });
-    fetchGroupsMock.mockResolvedValue([{ id: 1, name: 'Grupo A', members: 10, active: true, emoji: '🏥' }]);
+    fetchPreferencesMock.mockResolvedValue({
+      minVal: 1800,
+      maxDist: 15,
+      days: ['Sex'],
+      specs: ['UTI'],
+      auto: true,
+    });
+    fetchGroupsMock.mockResolvedValue([
+      { id: 1, name: 'Grupo A', members: 10, active: true, emoji: '🏥' },
+    ]);
     fetchWhatsappStatusMock.mockResolvedValue({ connected: true });
     loadInitialShiftsHookMock.mockResolvedValue(undefined);
     loadInitialStatusHookMock.mockResolvedValue({ isBotActive: true });
@@ -244,9 +262,12 @@ describe('AppMain critical flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'update-prefs' }));
     fireEvent.click(screen.getByRole('button', { name: 'update-groups' }));
 
-    await waitFor(() => {
-      expect(savePreferencesMock).toHaveBeenCalledTimes(1);
-      expect(saveGroupsMock).toHaveBeenCalledTimes(1);
-    }, { timeout: 2000 });
+    await waitFor(
+      () => {
+        expect(savePreferencesMock).toHaveBeenCalledTimes(1);
+        expect(saveGroupsMock).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2000 },
+    );
   });
 });

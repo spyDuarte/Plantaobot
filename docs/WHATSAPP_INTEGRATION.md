@@ -22,11 +22,11 @@ O PlantãoBot usa a **Evolution API** como bridge entre o WhatsApp e o backend. 
 
 ## Pré-requisitos
 
-| Componente | Descrição |
-|-----------|-----------|
-| Evolution API | Serviço self-hosted ou gerenciado para bridge WhatsApp |
-| Supabase | Banco de dados e autenticação |
-| Backend PlantãoBot | Node.js em execução (Render, Railway, VPS, etc.) |
+| Componente         | Descrição                                              |
+| ------------------ | ------------------------------------------------------ |
+| Evolution API      | Serviço self-hosted ou gerenciado para bridge WhatsApp |
+| Supabase           | Banco de dados e autenticação                          |
+| Backend PlantãoBot | Node.js em execução (Render, Railway, VPS, etc.)       |
 
 ---
 
@@ -162,23 +162,23 @@ O parser identifica ofertas de plantão por palavras-chave como:
 
 O PlantãoBot aceita webhooks de:
 
-| Provedor | Suporte |
-|---------|---------|
-| Evolution API (Baileys) | ✅ Nativo |
-| WhatsApp Business Cloud API (Meta) | ✅ Nativo |
-| WPPConnect | ✅ (formato similar ao Evolution) |
+| Provedor                           | Suporte                           |
+| ---------------------------------- | --------------------------------- |
+| Evolution API (Baileys)            | ✅ Nativo                         |
+| WhatsApp Business Cloud API (Meta) | ✅ Nativo                         |
+| WPPConnect                         | ✅ (formato similar ao Evolution) |
 
 ---
 
 ## Solução de problemas
 
-| Sintoma | Causa provável | Solução |
-|---------|----------------|---------|
-| "Integração Evolution API não configurada" | `EVOLUTION_API_URL` ou `EVOLUTION_API_KEY` ausentes | Adicione ao `.env` do backend e reinicie |
-| QR code não aparece | Evolution API inacessível | Verifique se a URL e a chave estão corretas |
-| Mensagens não chegam no Feed | Webhook não configurado | Copie a URL do webhook e configure na Evolution API |
-| Token inválido (401) | Token expirado ou incorreto | Clique em **Novo token** e reconfigure o webhook |
-| Grupos não aparecem | WhatsApp não conectado ou sem grupos | Certifique-se de estar em pelo menos um grupo |
+| Sintoma                                    | Causa provável                                      | Solução                                             |
+| ------------------------------------------ | --------------------------------------------------- | --------------------------------------------------- |
+| "Integração Evolution API não configurada" | `EVOLUTION_API_URL` ou `EVOLUTION_API_KEY` ausentes | Adicione ao `.env` do backend e reinicie            |
+| QR code não aparece                        | Evolution API inacessível                           | Verifique se a URL e a chave estão corretas         |
+| Mensagens não chegam no Feed               | Webhook não configurado                             | Copie a URL do webhook e configure na Evolution API |
+| Token inválido (401)                       | Token expirado ou incorreto                         | Clique em **Novo token** e reconfigure o webhook    |
+| Grupos não aparecem                        | WhatsApp não conectado ou sem grupos                | Certifique-se de estar em pelo menos um grupo       |
 
 ---
 

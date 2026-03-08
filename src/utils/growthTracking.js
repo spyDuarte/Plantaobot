@@ -15,15 +15,19 @@ function toMetric(value) {
 }
 
 function isRecord(value) {
-  return value != null && typeof value === "object" && !Array.isArray(value);
+  return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function isNormalizedMetricField(value) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && Math.round(value) === value;
+  return (
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 && Math.round(value) === value
+  );
 }
 
 export function normalizeReferralCode(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || '')
+    .trim()
+    .toLowerCase();
 }
 
 export function hasValidReferralCode(value) {
@@ -35,7 +39,7 @@ export function hasInviteQueryParams(searchParams) {
     return false;
   }
 
-  return searchParams.has("ref") || searchParams.has("ref_name") || searchParams.has("utm_source");
+  return searchParams.has('ref') || searchParams.has('ref_name') || searchParams.has('utm_source');
 }
 
 export function normalizeGrowthMetrics(input) {
@@ -80,9 +84,9 @@ export function isNormalizedGrowthMetrics(input) {
   }
 
   return (
-    isNormalizedMetricField(input.share_intent)
-    && isNormalizedMetricField(input.share_clicked)
-    && isNormalizedMetricField(input.invite_accepted)
+    isNormalizedMetricField(input.share_intent) &&
+    isNormalizedMetricField(input.share_clicked) &&
+    isNormalizedMetricField(input.invite_accepted)
   );
 }
 
@@ -91,10 +95,10 @@ export function areGrowthMetricsEqual(left, right) {
   const normalizedRight = normalizeGrowthMetrics(right);
 
   return (
-    normalizedLeft.schemaVersion === normalizedRight.schemaVersion
-    && normalizedLeft.share_intent === normalizedRight.share_intent
-    && normalizedLeft.share_clicked === normalizedRight.share_clicked
-    && normalizedLeft.invite_accepted === normalizedRight.invite_accepted
+    normalizedLeft.schemaVersion === normalizedRight.schemaVersion &&
+    normalizedLeft.share_intent === normalizedRight.share_intent &&
+    normalizedLeft.share_clicked === normalizedRight.share_clicked &&
+    normalizedLeft.invite_accepted === normalizedRight.invite_accepted
   );
 }
 

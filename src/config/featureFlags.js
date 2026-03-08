@@ -1,8 +1,8 @@
-const TRUE_VALUES = new Set(["1", "true", "yes", "on"]);
+const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
 
 export function isUiV2Enabled() {
-  if (typeof window !== "undefined") {
-    const localOverride = window.localStorage.getItem("pb_feature_ui_v2");
+  if (typeof window !== 'undefined') {
+    const localOverride = window.localStorage.getItem('pb_feature_ui_v2');
     if (localOverride != null) {
       return TRUE_VALUES.has(localOverride.toLowerCase());
     }

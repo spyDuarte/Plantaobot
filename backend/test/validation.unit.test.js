@@ -35,7 +35,11 @@ describe('backend validation contract', () => {
 
   it('rejects invalid payloads with validation error', () => {
     expect(() => validateEmailPayload({ email: 'invalid' })).toThrow('Payload inválido.');
-    expect(() => validateResetPassword({ newPassword: 'senha com espaco' })).toThrow('Payload inválido.');
-    expect(() => validateSignup({ name: 'A', email: 'a@b.com', password: '123' })).toThrow('Payload inválido.');
+    expect(() => validateResetPassword({ newPassword: 'senha com espaco' })).toThrow(
+      'Payload inválido.',
+    );
+    expect(() => validateSignup({ name: 'A', email: 'a@b.com', password: '123' })).toThrow(
+      'Payload inválido.',
+    );
   });
 });

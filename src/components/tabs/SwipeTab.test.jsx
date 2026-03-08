@@ -52,7 +52,9 @@ describe('SwipeTab', () => {
       />,
     );
 
-    expect(screen.getByText('Nenhum plantao pendente')).toBeInTheDocument();
-    expect(screen.getByText('Inicie o bot no dashboard.')).toBeInTheDocument();
+    expect(screen.getByText('Sua fila está vazia')).toBeInTheDocument();
+    expect(
+      screen.getByText('Inicie o monitoramento no dashboard para receber plantões.'),
+    ).toBeInTheDocument();
   });
 });

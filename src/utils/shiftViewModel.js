@@ -23,7 +23,7 @@ export function toShiftViewModel(shift) {
     state: shift.state || null,
     timestamp: shift.ts || null,
     isOffer: Boolean(shift.isOffer),
-    source: "mock",
+    source: 'mock',
     original: shift,
   };
 }

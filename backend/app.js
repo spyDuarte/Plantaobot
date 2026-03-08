@@ -163,7 +163,11 @@ function requireAuth({ allowUnverified = false } = {}, deps) {
     const auth = await resolveSession(req, res, deps);
 
     if (!allowUnverified && !auth.emailVerified) {
-      throw createHttpError(403, 'EMAIL_NOT_VERIFIED', 'Confirme o email antes de acessar os recursos protegidos.');
+      throw createHttpError(
+        403,
+        'EMAIL_NOT_VERIFIED',
+        'Confirme o email antes de acessar os recursos protegidos.',
+      );
     }
 
     next();
@@ -236,11 +240,9 @@ export function createApp(options = {}) {
 
   const authService = options.authService || createSupabaseAuthService(config);
   const dataStore = options.dataStore || createSupabaseDataStore(config);
-  const whatsappProvider = options.whatsappProvider || (
-    config.evolutionApiUrl && config.evolutionApiKey
-      ? createWhatsappProvider(config)
-      : null
-  );
+  const whatsappProvider =
+    options.whatsappProvider ||
+    (config.evolutionApiUrl && config.evolutionApiKey ? createWhatsappProvider(config) : null);
 
   const deps = {
     config,
@@ -255,7 +257,9 @@ export function createApp(options = {}) {
   app.disable('x-powered-by');
 
   if (String(config.cookieSameSite || 'lax').toLowerCase() === 'none' && !config.secureCookies) {
-    console.warn('[backend] COOKIE_SAME_SITE=none requer COOKIE_SECURE=true em navegadores modernos.');
+    console.warn(
+      '[backend] COOKIE_SAME_SITE=none requer COOKIE_SECURE=true em navegadores modernos.',
+    );
   }
 
   app.use((req, res, next) => {
@@ -282,94 +286,100 @@ export function createApp(options = {}) {
   // ─── WhatsApp Webhook (CSRF-exempt: authenticated by per-user webhook token) ───
 
   // GET /api/whatsapp/webhook/:userId — WhatsApp Business Cloud API hub verification
-  app.get('/api/whatsapp/webhook/:userId', asyncRoute(async (req, res) => {
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
+  app.get(
+    '/api/whatsapp/webhook/:userId',
+    asyncRoute(async (req, res) => {
+      const mode = req.query['hub.mode'];
+      const token = req.query['hub.verify_token'];
+      const challenge = req.query['hub.challenge'];
 
-    if (mode === 'subscribe' && token && challenge) {
-      const userId = String(req.params.userId);
-      const valid = await dataStore.validateWebhookToken(userId, token);
-      if (valid) {
-        return res.status(200).send(challenge);
+      if (mode === 'subscribe' && token && challenge) {
+        const userId = String(req.params.userId);
+        const valid = await dataStore.validateWebhookToken(userId, token);
+        if (valid) {
+          return res.status(200).send(challenge);
+        }
       }
-    }
 
-    res.status(403).json({ error: 'FORBIDDEN', message: 'Token de verificação inválido.' });
-  }));
+      res.status(403).json({ error: 'FORBIDDEN', message: 'Token de verificação inválido.' });
+    }),
+  );
 
   // POST /api/whatsapp/webhook/:userId — incoming messages from Evolution API or WhatsApp Cloud
-  app.post('/api/whatsapp/webhook/:userId', asyncRoute(async (req, res) => {
-    const userId = String(req.params.userId);
-    const token =
-      req.query.token ||
-      req.headers['x-webhook-secret'] ||
-      req.headers['x-hub-signature-256']?.replace('sha256=', '') ||
-      null;
+  app.post(
+    '/api/whatsapp/webhook/:userId',
+    asyncRoute(async (req, res) => {
+      const userId = String(req.params.userId);
+      const token =
+        req.query.token ||
+        req.headers['x-webhook-secret'] ||
+        req.headers['x-hub-signature-256']?.replace('sha256=', '') ||
+        null;
 
-    if (!token) {
-      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token não fornecido.' });
-    }
+      if (!token) {
+        return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token não fornecido.' });
+      }
 
-    const valid = await dataStore.validateWebhookToken(userId, token);
-    if (!valid) {
-      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token inválido.' });
-    }
+      const valid = await dataStore.validateWebhookToken(userId, token);
+      if (!valid) {
+        return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Token inválido.' });
+      }
 
-    const statusChange = normalizeIncomingWebhookStatus(req.body);
-    if (statusChange) {
-      await dataStore.saveWhatsappStatusTransition(userId, statusChange);
-      return res.json({ ok: true, processed: true, type: 'status' });
-    }
+      const statusChange = normalizeIncomingWebhookStatus(req.body);
+      if (statusChange) {
+        await dataStore.saveWhatsappStatusTransition(userId, statusChange);
+        return res.json({ ok: true, processed: true, type: 'status' });
+      }
 
-    const normalized = normalizeIncomingWebhook(req.body);
-    if (!normalized) {
-      // Acknowledge unrecognized payloads silently
-      return res.json({ ok: true, processed: false });
-    }
+      const normalized = normalizeIncomingWebhook(req.body);
+      if (!normalized) {
+        // Acknowledge unrecognized payloads silently
+        return res.json({ ok: true, processed: false });
+      }
 
-    if (normalized.isGroup) {
-      const isGroupActive = await dataStore.isActiveGroupByJidOrName(userId, {
-        jid: normalized.jid,
-        groupName: normalized.groupName || normalized.senderName,
-      });
-
-      if (!isGroupActive) {
-        console.info('[whatsapp_webhook] dropped_inactive_group_message', {
-          userId,
-          hasJid: Boolean(normalized.jid),
-          hasGroupName: Boolean(normalized.groupName || normalized.senderName),
-          messageId: normalized.messageId || null,
-          eventType: String(req.body?.event || ''),
-          timestamp: normalized.timestamp,
+      if (normalized.isGroup) {
+        const isGroupActive = await dataStore.isActiveGroupByJidOrName(userId, {
+          jid: normalized.jid,
+          groupName: normalized.groupName || normalized.senderName,
         });
 
-        return res.json({ ok: true, processed: false, reason: 'inactive_group' });
+        if (!isGroupActive) {
+          console.info('[whatsapp_webhook] dropped_inactive_group_message', {
+            userId,
+            hasJid: Boolean(normalized.jid),
+            hasGroupName: Boolean(normalized.groupName || normalized.senderName),
+            messageId: normalized.messageId || null,
+            eventType: String(req.body?.event || ''),
+            timestamp: normalized.timestamp,
+          });
+
+          return res.json({ ok: true, processed: false, reason: 'inactive_group' });
+        }
       }
-    }
 
-    const offerFound = isShiftOffer(normalized.text);
-    const offer = offerFound
-      ? parseShiftOffer(normalized.text, {
-          groupName: normalized.groupName || normalized.senderName,
-          senderName: normalized.senderName,
-          messageId: normalized.messageId,
-        })
-      : null;
+      const offerFound = isShiftOffer(normalized.text);
+      const offer = offerFound
+        ? parseShiftOffer(normalized.text, {
+            groupName: normalized.groupName || normalized.senderName,
+            senderName: normalized.senderName,
+            messageId: normalized.messageId,
+          })
+        : null;
 
-    await dataStore.saveWhatsappMessage(userId, {
-      messageId: normalized.messageId,
-      jid: normalized.jid,
-      groupName: normalized.groupName || normalized.senderName,
-      senderName: normalized.senderName,
-      rawText: normalized.text,
-      isOffer: offerFound,
-      offer,
-      receivedAt: normalized.timestamp,
-    });
+      await dataStore.saveWhatsappMessage(userId, {
+        messageId: normalized.messageId,
+        jid: normalized.jid,
+        groupName: normalized.groupName || normalized.senderName,
+        senderName: normalized.senderName,
+        rawText: normalized.text,
+        isOffer: offerFound,
+        offer,
+        receivedAt: normalized.timestamp,
+      });
 
-    res.json({ ok: true, processed: true, isOffer: offerFound });
-  }));
+      res.json({ ok: true, processed: true, isOffer: offerFound });
+    }),
+  );
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -393,371 +403,514 @@ export function createApp(options = {}) {
     res.json({ ok: true, ts: new Date().toISOString() });
   });
 
-  app.post('/api/auth/signup', asyncRoute(async (req, res) => {
-    const payload = validateSignup(req.body);
-    const result = await authService.signUp(payload);
+  app.post(
+    '/api/auth/signup',
+    asyncRoute(async (req, res) => {
+      const payload = validateSignup(req.body);
+      const result = await authService.signUp(payload);
 
-    if (result.user?.id) {
-      await dataStore.ensureProfile({
-        userId: result.user.id,
-        name: payload.name,
+      if (result.user?.id) {
+        await dataStore.ensureProfile({
+          userId: result.user.id,
+          name: payload.name,
+        });
+      }
+
+      if (result.session) {
+        setAuthCookies(res, result.session, config);
+      }
+
+      const emailVerified = isEmailVerified(result.user);
+
+      res.status(201).json({
+        user: toPublicUser(result.user),
+        emailVerified,
+        requiresEmailVerification: !emailVerified,
       });
-    }
+    }),
+  );
 
-    if (result.session) {
+  app.post(
+    '/api/auth/login',
+    asyncRoute(async (req, res) => {
+      const payload = validateLogin(req.body);
+      const result = await authService.login(payload);
+
+      if (!isEmailVerified(result.user)) {
+        throw createHttpError(
+          403,
+          'EMAIL_NOT_VERIFIED',
+          'Confirme o email antes de acessar o app.',
+        );
+      }
+
       setAuthCookies(res, result.session, config);
-    }
 
-    const emailVerified = isEmailVerified(result.user);
-
-    res.status(201).json({
-      user: toPublicUser(result.user),
-      emailVerified,
-      requiresEmailVerification: !emailVerified,
-    });
-  }));
-
-  app.post('/api/auth/login', asyncRoute(async (req, res) => {
-    const payload = validateLogin(req.body);
-    const result = await authService.login(payload);
-
-    if (!isEmailVerified(result.user)) {
-      throw createHttpError(403, 'EMAIL_NOT_VERIFIED', 'Confirme o email antes de acessar o app.');
-    }
-
-    setAuthCookies(res, result.session, config);
-
-    await dataStore.ensureProfile({
-      userId: result.user.id,
-      name: result.user?.user_metadata?.name,
-    });
-
-    const profile = await dataStore.getProfile(result.user.id);
-
-    res.json({
-      user: toPublicUser(result.user),
-      profile: normalizeProfile(profile, result.user),
-      emailVerified: true,
-    });
-  }));
-
-  app.post('/api/auth/logout', asyncRoute(async (req, res) => {
-    const accessToken = req.cookies?.[COOKIE_NAMES.accessToken];
-    const refreshToken = req.cookies?.[COOKIE_NAMES.refreshToken];
-
-    await authService.logout({ accessToken, refreshToken });
-    clearAuthCookies(res, config);
-
-    res.status(204).send();
-  }));
-
-  app.get('/api/auth/me', asyncRoute(async (req, res) => {
-    const auth = await resolveSession(req, res, deps);
-
-    await dataStore.ensureProfile({
-      userId: auth.user.id,
-      name: auth.user?.user_metadata?.name,
-    });
-
-    const profile = await dataStore.getProfile(auth.user.id);
-
-    res.json({
-      user: toPublicUser(auth.user),
-      profile: normalizeProfile(profile, auth.user),
-      emailVerified: auth.emailVerified,
-    });
-  }));
-
-  app.post('/api/auth/resend-verification', asyncRoute(async (req, res) => {
-    const payload = validateEmailPayload(req.body);
-    await authService.resendVerification(payload);
-    res.json({ ok: true });
-  }));
-
-  app.post('/api/auth/forgot-password', asyncRoute(async (req, res) => {
-    const payload = validateEmailPayload(req.body);
-    await authService.forgotPassword(payload);
-    res.json({ ok: true });
-  }));
-
-  app.post('/api/auth/confirm', asyncRoute(async (req, res) => {
-    const payload = validateConfirm(req.body);
-    const result = await authService.confirm(payload);
-
-    if (result.session) {
-      setAuthCookies(res, result.session, config);
-    }
-
-    if (result.user?.id) {
       await dataStore.ensureProfile({
         userId: result.user.id,
         name: result.user?.user_metadata?.name,
       });
-    }
 
-    res.json({
-      user: toPublicUser(result.user),
-      emailVerified: isEmailVerified(result.user),
-      type: payload.type,
-    });
-  }));
+      const profile = await dataStore.getProfile(result.user.id);
 
-  app.post('/api/auth/reset-password', requireAuth({ allowUnverified: true }, deps), asyncRoute(async (req, res) => {
-    const payload = validateResetPassword(req.body);
-    const result = await authService.resetPassword({
-      accessToken: req.cookies?.[COOKIE_NAMES.accessToken],
-      refreshToken: req.cookies?.[COOKIE_NAMES.refreshToken],
-      newPassword: payload.newPassword,
-    });
+      res.json({
+        user: toPublicUser(result.user),
+        profile: normalizeProfile(profile, result.user),
+        emailVerified: true,
+      });
+    }),
+  );
 
-    if (result.session) {
-      setAuthCookies(res, result.session, config);
-    }
+  app.post(
+    '/api/auth/logout',
+    asyncRoute(async (req, res) => {
+      const accessToken = req.cookies?.[COOKIE_NAMES.accessToken];
+      const refreshToken = req.cookies?.[COOKIE_NAMES.refreshToken];
 
-    res.json({
-      ok: true,
-      user: toPublicUser(result.user),
-    });
-  }));
+      await authService.logout({ accessToken, refreshToken });
+      clearAuthCookies(res, config);
 
-  app.post('/api/auth/bootstrap-import', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validateBootstrapImport(req.body);
-    const result = await dataStore.bootstrapImport({
-      userId: req.auth.user.id,
-      prefs: payload.prefs,
-      groups: payload.groups,
-      captured: payload.captured,
-      rejected: payload.rejected,
-      profileName: req.auth.user?.user_metadata?.name,
-    });
+      res.status(204).send();
+    }),
+  );
 
-    res.json(result);
-  }));
+  app.get(
+    '/api/auth/me',
+    asyncRoute(async (req, res) => {
+      const auth = await resolveSession(req, res, deps);
 
-  app.get('/api/monitor/status', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const status = await dataStore.getMonitorStatus(req.auth.user.id);
-    res.json(status);
-  }));
-
-  app.post('/api/monitor/start', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validateMonitorStart(req.body);
-    const waStatus = await dataStore.getWhatsappStatus(req.auth.user.id);
-
-    if (!waStatus?.connected) {
-      throw createHttpError(409, 'WHATSAPP_NOT_CONNECTED', 'Conecte o WhatsApp antes de iniciar o monitoramento.');
-    }
-
-    const result = await dataStore.startMonitoring(req.auth.user.id, payload);
-    res.json({ sessionId: result.sessionId, active: true });
-  }));
-
-  app.post('/api/monitor/stop', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const sessionId = req.body?.sessionId ? String(req.body.sessionId) : null;
-    await dataStore.stopMonitoring(req.auth.user.id, { sessionId });
-    res.json({ ok: true });
-  }));
-
-  app.get('/api/monitor/feed', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const cursor = req.query.cursor ? String(req.query.cursor) : null;
-    const sessionId = req.query.sessionId ? String(req.query.sessionId) : null;
-    const groupIds = parseGroupIds(req.query.groupId);
-
-    const result = await dataStore.fetchFeed(req.auth.user.id, {
-      cursor,
-      sessionId,
-      groupIds,
-    });
-
-    res.json({
-      items: result.items || [],
-      nextCursor: result.nextCursor || null,
-    });
-  }));
-
-  app.get('/api/captures', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const items = await dataStore.listCaptures(req.auth.user.id);
-    res.json({ items });
-  }));
-
-  app.post('/api/captures', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validateOfferMutation(req.body);
-    const item = await dataStore.addCapture(req.auth.user.id, payload);
-    res.status(201).json({ item });
-  }));
-
-  app.delete('/api/captures', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    await dataStore.clearCaptures(req.auth.user.id);
-    res.status(204).send();
-  }));
-
-  app.get('/api/rejections', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const items = await dataStore.listRejections(req.auth.user.id);
-    res.json({ items });
-  }));
-
-  app.post('/api/rejections', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validateOfferMutation(req.body);
-    const item = await dataStore.addRejection(req.auth.user.id, payload);
-    res.status(201).json({ item });
-  }));
-
-  app.delete('/api/rejections', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    await dataStore.clearRejections(req.auth.user.id);
-    res.status(204).send();
-  }));
-
-  app.get('/api/preferences', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const preferences = await dataStore.getPreferences(req.auth.user.id);
-    res.json({ preferences: preferences || {} });
-  }));
-
-  app.put('/api/preferences', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validatePreferences(req.body);
-    await dataStore.savePreferences(req.auth.user.id, payload.preferences);
-    res.json({ ok: true });
-  }));
-
-  app.get('/api/groups', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const groups = await dataStore.getGroups(req.auth.user.id);
-    res.json({ groups });
-  }));
-
-  app.put('/api/groups', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validateGroups(req.body);
-    await dataStore.saveGroups(req.auth.user.id, payload.groups);
-    res.json({ ok: true });
-  }));
-
-  app.delete('/api/history', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    await dataStore.clearHistory(req.auth.user.id);
-    res.status(204).send();
-  }));
-
-  app.post('/api/events', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const payload = validateEvent(req.body);
-    await dataStore.trackEvent(req.auth.user.id, payload);
-    res.status(201).json({ ok: true });
-  }));
-
-  // GET /api/whatsapp/config — returns webhook URL token and connection status
-  app.get('/api/whatsapp/config', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const waConfig = await dataStore.getWhatsappConfig(req.auth.user.id);
-    const messageCount = await dataStore.getWhatsappMessageCount(req.auth.user.id);
-    res.json({ ...waConfig, messageCount });
-  }));
-
-  app.get('/api/whatsapp/status', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const userId = req.auth.user.id;
-    const refresh = String(req.query.refresh || '').toLowerCase() === '1' || String(req.query.refresh || '').toLowerCase() === 'true';
-
-    const status = await dataStore.getWhatsappStatus(userId);
-
-    if (!refresh || !whatsappProvider || !status.instanceId) {
-      res.json(status);
-      return;
-    }
-
-    try {
-      const live = await whatsappProvider.getInstanceConnectionStatus({ instanceId: status.instanceId });
-      await dataStore.saveWhatsappStatusTransition(userId, {
-        connected: Boolean(live.connected),
-        instanceId: live.instanceId || status.instanceId,
-        phoneNumber: live.phoneNumber || status.phoneNumber || null,
+      await dataStore.ensureProfile({
+        userId: auth.user.id,
+        name: auth.user?.user_metadata?.name,
       });
 
-      const nextStatus = await dataStore.getWhatsappStatus(userId);
-      res.json(nextStatus);
-    } catch {
-      // Fallback to persisted status to avoid UI hard-failure when provider is transiently unavailable.
+      const profile = await dataStore.getProfile(auth.user.id);
+
+      res.json({
+        user: toPublicUser(auth.user),
+        profile: normalizeProfile(profile, auth.user),
+        emailVerified: auth.emailVerified,
+      });
+    }),
+  );
+
+  app.post(
+    '/api/auth/resend-verification',
+    asyncRoute(async (req, res) => {
+      const payload = validateEmailPayload(req.body);
+      await authService.resendVerification(payload);
+      res.json({ ok: true });
+    }),
+  );
+
+  app.post(
+    '/api/auth/forgot-password',
+    asyncRoute(async (req, res) => {
+      const payload = validateEmailPayload(req.body);
+      await authService.forgotPassword(payload);
+      res.json({ ok: true });
+    }),
+  );
+
+  app.post(
+    '/api/auth/confirm',
+    asyncRoute(async (req, res) => {
+      const payload = validateConfirm(req.body);
+      const result = await authService.confirm(payload);
+
+      if (result.session) {
+        setAuthCookies(res, result.session, config);
+      }
+
+      if (result.user?.id) {
+        await dataStore.ensureProfile({
+          userId: result.user.id,
+          name: result.user?.user_metadata?.name,
+        });
+      }
+
+      res.json({
+        user: toPublicUser(result.user),
+        emailVerified: isEmailVerified(result.user),
+        type: payload.type,
+      });
+    }),
+  );
+
+  app.post(
+    '/api/auth/reset-password',
+    requireAuth({ allowUnverified: true }, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateResetPassword(req.body);
+      const result = await authService.resetPassword({
+        accessToken: req.cookies?.[COOKIE_NAMES.accessToken],
+        refreshToken: req.cookies?.[COOKIE_NAMES.refreshToken],
+        newPassword: payload.newPassword,
+      });
+
+      if (result.session) {
+        setAuthCookies(res, result.session, config);
+      }
+
+      res.json({
+        ok: true,
+        user: toPublicUser(result.user),
+      });
+    }),
+  );
+
+  app.post(
+    '/api/auth/bootstrap-import',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateBootstrapImport(req.body);
+      const result = await dataStore.bootstrapImport({
+        userId: req.auth.user.id,
+        prefs: payload.prefs,
+        groups: payload.groups,
+        captured: payload.captured,
+        rejected: payload.rejected,
+        profileName: req.auth.user?.user_metadata?.name,
+      });
+
+      res.json(result);
+    }),
+  );
+
+  app.get(
+    '/api/monitor/status',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const status = await dataStore.getMonitorStatus(req.auth.user.id);
       res.json(status);
-    }
-  }));
+    }),
+  );
+
+  app.post(
+    '/api/monitor/start',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateMonitorStart(req.body);
+      const waStatus = await dataStore.getWhatsappStatus(req.auth.user.id);
+
+      if (!waStatus?.connected) {
+        throw createHttpError(
+          409,
+          'WHATSAPP_NOT_CONNECTED',
+          'Conecte o WhatsApp antes de iniciar o monitoramento.',
+        );
+      }
+
+      const result = await dataStore.startMonitoring(req.auth.user.id, payload);
+      res.json({ sessionId: result.sessionId, active: true });
+    }),
+  );
+
+  app.post(
+    '/api/monitor/stop',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const sessionId = req.body?.sessionId ? String(req.body.sessionId) : null;
+      await dataStore.stopMonitoring(req.auth.user.id, { sessionId });
+      res.json({ ok: true });
+    }),
+  );
+
+  app.get(
+    '/api/monitor/feed',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const cursor = req.query.cursor ? String(req.query.cursor) : null;
+      const sessionId = req.query.sessionId ? String(req.query.sessionId) : null;
+      const groupIds = parseGroupIds(req.query.groupId);
+
+      const result = await dataStore.fetchFeed(req.auth.user.id, {
+        cursor,
+        sessionId,
+        groupIds,
+      });
+
+      res.json({
+        items: result.items || [],
+        nextCursor: result.nextCursor || null,
+      });
+    }),
+  );
+
+  app.get(
+    '/api/captures',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const items = await dataStore.listCaptures(req.auth.user.id);
+      res.json({ items });
+    }),
+  );
+
+  app.post(
+    '/api/captures',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateOfferMutation(req.body);
+      const item = await dataStore.addCapture(req.auth.user.id, payload);
+      res.status(201).json({ item });
+    }),
+  );
+
+  app.delete(
+    '/api/captures',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      await dataStore.clearCaptures(req.auth.user.id);
+      res.status(204).send();
+    }),
+  );
+
+  app.get(
+    '/api/rejections',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const items = await dataStore.listRejections(req.auth.user.id);
+      res.json({ items });
+    }),
+  );
+
+  app.post(
+    '/api/rejections',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateOfferMutation(req.body);
+      const item = await dataStore.addRejection(req.auth.user.id, payload);
+      res.status(201).json({ item });
+    }),
+  );
+
+  app.delete(
+    '/api/rejections',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      await dataStore.clearRejections(req.auth.user.id);
+      res.status(204).send();
+    }),
+  );
+
+  app.get(
+    '/api/preferences',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const preferences = await dataStore.getPreferences(req.auth.user.id);
+      res.json({ preferences: preferences || {} });
+    }),
+  );
+
+  app.put(
+    '/api/preferences',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validatePreferences(req.body);
+      await dataStore.savePreferences(req.auth.user.id, payload.preferences);
+      res.json({ ok: true });
+    }),
+  );
+
+  app.get(
+    '/api/groups',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const groups = await dataStore.getGroups(req.auth.user.id);
+      res.json({ groups });
+    }),
+  );
+
+  app.put(
+    '/api/groups',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateGroups(req.body);
+      await dataStore.saveGroups(req.auth.user.id, payload.groups);
+      res.json({ ok: true });
+    }),
+  );
+
+  app.delete(
+    '/api/history',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      await dataStore.clearHistory(req.auth.user.id);
+      res.status(204).send();
+    }),
+  );
+
+  app.post(
+    '/api/events',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const payload = validateEvent(req.body);
+      await dataStore.trackEvent(req.auth.user.id, payload);
+      res.status(201).json({ ok: true });
+    }),
+  );
+
+  // GET /api/whatsapp/config — returns webhook URL token and connection status
+  app.get(
+    '/api/whatsapp/config',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const waConfig = await dataStore.getWhatsappConfig(req.auth.user.id);
+      const messageCount = await dataStore.getWhatsappMessageCount(req.auth.user.id);
+      res.json({ ...waConfig, messageCount });
+    }),
+  );
+
+  app.get(
+    '/api/whatsapp/status',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const userId = req.auth.user.id;
+      const refresh =
+        String(req.query.refresh || '').toLowerCase() === '1' ||
+        String(req.query.refresh || '').toLowerCase() === 'true';
+
+      const status = await dataStore.getWhatsappStatus(userId);
+
+      if (!refresh || !whatsappProvider || !status.instanceId) {
+        res.json(status);
+        return;
+      }
+
+      try {
+        const live = await whatsappProvider.getInstanceConnectionStatus({
+          instanceId: status.instanceId,
+        });
+        await dataStore.saveWhatsappStatusTransition(userId, {
+          connected: Boolean(live.connected),
+          instanceId: live.instanceId || status.instanceId,
+          phoneNumber: live.phoneNumber || status.phoneNumber || null,
+        });
+
+        const nextStatus = await dataStore.getWhatsappStatus(userId);
+        res.json(nextStatus);
+      } catch {
+        // Fallback to persisted status to avoid UI hard-failure when provider is transiently unavailable.
+        res.json(status);
+      }
+    }),
+  );
 
   // POST /api/whatsapp/config/reset-token — rotates the webhook secret token
-  app.post('/api/whatsapp/config/reset-token', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const result = await dataStore.resetWebhookToken(req.auth.user.id);
-    res.json(result);
-  }));
+  app.post(
+    '/api/whatsapp/config/reset-token',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const result = await dataStore.resetWebhookToken(req.auth.user.id);
+      res.json(result);
+    }),
+  );
 
   // POST /api/whatsapp/connect — creates/reuses instance and returns QR for pairing
-  app.post('/api/whatsapp/connect', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    if (!whatsappProvider) {
-      throw createHttpError(503, 'EVOLUTION_NOT_CONFIGURED', 'Integração Evolution API não configurada no servidor.');
-    }
+  app.post(
+    '/api/whatsapp/connect',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      if (!whatsappProvider) {
+        throw createHttpError(
+          503,
+          'EVOLUTION_NOT_CONFIGURED',
+          'Integração Evolution API não configurada no servidor.',
+        );
+      }
 
-    const userId = req.auth.user.id;
-    const current = await dataStore.getWhatsappConfig(userId);
+      const userId = req.auth.user.id;
+      const current = await dataStore.getWhatsappConfig(userId);
 
-    const created = current.instanceId
-      ? { instanceId: current.instanceId }
-      : await whatsappProvider.createInstanceForUser({ userId });
+      const created = current.instanceId
+        ? { instanceId: current.instanceId }
+        : await whatsappProvider.createInstanceForUser({ userId });
 
-    await dataStore.saveWhatsappInstanceMetadata(userId, {
-      instanceId: created.instanceId,
-      connected: false,
-    });
+      await dataStore.saveWhatsappInstanceMetadata(userId, {
+        instanceId: created.instanceId,
+        connected: false,
+      });
 
-    const qr = await whatsappProvider.getInstanceQr({ instanceId: created.instanceId });
+      const qr = await whatsappProvider.getInstanceQr({ instanceId: created.instanceId });
 
-    res.json({
-      instanceId: created.instanceId,
-      qrCode: qr.qrCode,
-      state: qr.state || 'connecting',
-      connected: false,
-    });
-  }));
+      res.json({
+        instanceId: created.instanceId,
+        qrCode: qr.qrCode,
+        state: qr.state || 'connecting',
+        connected: false,
+      });
+    }),
+  );
 
-  app.get('/api/whatsapp/groups', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    if (!whatsappProvider) {
-      throw createHttpError(503, 'EVOLUTION_NOT_CONFIGURED', 'Integração Evolution API não configurada no servidor.');
-    }
+  app.get(
+    '/api/whatsapp/groups',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      if (!whatsappProvider) {
+        throw createHttpError(
+          503,
+          'EVOLUTION_NOT_CONFIGURED',
+          'Integração Evolution API não configurada no servidor.',
+        );
+      }
 
-    const userId = req.auth.user.id;
-    const waConfig = await dataStore.getWhatsappConfig(userId);
+      const userId = req.auth.user.id;
+      const waConfig = await dataStore.getWhatsappConfig(userId);
 
-    if (!waConfig.instanceId) {
-      throw createHttpError(409, 'WHATSAPP_INSTANCE_NOT_FOUND', 'Conecte seu WhatsApp antes de sincronizar os grupos.');
-    }
+      if (!waConfig.instanceId) {
+        throw createHttpError(
+          409,
+          'WHATSAPP_INSTANCE_NOT_FOUND',
+          'Conecte seu WhatsApp antes de sincronizar os grupos.',
+        );
+      }
 
-    const groups = await whatsappProvider.listInstanceGroups({ instanceId: waConfig.instanceId });
-    const merged = await dataStore.mergeGroups(userId, groups);
+      const groups = await whatsappProvider.listInstanceGroups({ instanceId: waConfig.instanceId });
+      const merged = await dataStore.mergeGroups(userId, groups);
 
-    res.json({ groups: merged });
-  }));
+      res.json({ groups: merged });
+    }),
+  );
 
-  app.post('/api/chat', requireAuth({}, deps), asyncRoute(async (req, res) => {
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) {
-      throw createHttpError(503, 'AI_UNAVAILABLE', 'Serviço de IA não configurado.');
-    }
+  app.post(
+    '/api/chat',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      const anthropicKey = process.env.ANTHROPIC_API_KEY;
+      if (!anthropicKey) {
+        throw createHttpError(503, 'AI_UNAVAILABLE', 'Serviço de IA não configurado.');
+      }
 
-    const payload = validateChatPayload(req.body);
+      const payload = validateChatPayload(req.body);
 
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: payload.system || undefined,
-        messages: payload.messages,
-      }),
-    });
+      const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: payload.system || undefined,
+          messages: payload.messages,
+        }),
+      });
 
-    if (!anthropicRes.ok) {
-      throw createHttpError(502, 'AI_ERROR', 'Erro ao comunicar com a IA.');
-    }
+      if (!anthropicRes.ok) {
+        throw createHttpError(502, 'AI_ERROR', 'Erro ao comunicar com a IA.');
+      }
 
-    const data = await anthropicRes.json();
-    res.json({ reply: data.content?.[0]?.text || '' });
-  }));
+      const data = await anthropicRes.json();
+      res.json({ reply: data.content?.[0]?.text || '' });
+    }),
+  );
 
   app.use((error, _req, res, _next) => {
-    const normalized = isHttpError(error) ? error : createHttpError(500, 'INTERNAL_ERROR', error?.message);
+    const normalized = isHttpError(error)
+      ? error
+      : createHttpError(500, 'INTERNAL_ERROR', error?.message);
     const { status, payload } = toErrorPayload(normalized);
 
     if (status >= 500) {

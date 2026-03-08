@@ -1,7 +1,13 @@
-import { useState, useCallback, useRef } from "react";
-import { useLocalStorage } from "./useLocalStorage.js";
-import { captureOffer, rejectOffer, clearHistory, fetchCapturedOffers, fetchRejectedOffers } from "../services/monitoringApi.js";
-import { calcScore, fmt, nowT } from "../utils/index.js";
+import { useState, useCallback, useRef } from 'react';
+import { useLocalStorage } from './useLocalStorage.js';
+import {
+  captureOffer,
+  rejectOffer,
+  clearHistory,
+  fetchCapturedOffers,
+  fetchRejectedOffers,
+} from '../services/monitoringApi.js';
+import { calcScore, fmt, nowT } from '../utils/index.js';
 
 function appendUniqueById(list, item) {
   if (!item) {
@@ -17,7 +23,7 @@ function appendUniqueById(list, item) {
 
 export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConfetti, setTyping }) {
   const [feed, setFeed] = useState([]);
-  const [captured, setCaptured] = useLocalStorage("pb_captured", []);
+  const [captured, setCaptured] = useLocalStorage('pb_captured', []);
   const [rejected, setRejected] = useState([]);
   const [pending, setPending] = useState([]);
   const processedOffersRef = useRef(new Set());
@@ -45,149 +51,179 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
     });
   }, []);
 
-  const registerCapture = useCallback((shift, { fromAuto = false } = {}) => {
-    const nowIso = new Date().toISOString();
-    const normalizedShift = {
-      ...shift,
-      capturedAt: shift.capturedAt || nowT(),
-      capturedAtISO: shift.capturedAtISO || nowIso,
-    };
+  const registerCapture = useCallback(
+    (shift, { fromAuto = false } = {}) => {
+      const nowIso = new Date().toISOString();
+      const normalizedShift = {
+        ...shift,
+        capturedAt: shift.capturedAt || nowT(),
+        capturedAtISO: shift.capturedAtISO || nowIso,
+      };
 
-    setCaptured((previous) => appendUniqueById(previous, normalizedShift));
-    setPending((previous) => previous.filter((item) => item.id !== shift.id));
+      setCaptured((previous) => appendUniqueById(previous, normalizedShift));
+      setPending((previous) => previous.filter((item) => item.id !== shift.id));
 
-    if (fromAuto) {
-      addNotif(
-        "Plantão capturado",
-        `${shift.hospital} - ${shift.date} - R$ ${fmt(shift.val)}`,
-        "success",
-        "bot",
-      );
-      toast("Plantão garantido", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "bot");
-    } else {
-      toast("Plantão aceito", `${shift.hospital} - R$ ${fmt(shift.val)}`, "success", "manual");
-    }
+      if (fromAuto) {
+        addNotif(
+          'Plantão capturado',
+          `${shift.hospital} - ${shift.date} - R$ ${fmt(shift.val)}`,
+          'success',
+          'bot',
+        );
+        toast('Plantão garantido', `${shift.hospital} - R$ ${fmt(shift.val)}`, 'success', 'bot');
+      } else {
+        toast('Plantão aceito', `${shift.hospital} - R$ ${fmt(shift.val)}`, 'success', 'manual');
+      }
 
-    if (Number(shift.val) >= 3000 && setConfetti) {
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 2500);
-    }
-  }, [addNotif, toast, setCaptured, setConfetti]);
+      if (Number(shift.val) >= 3000 && setConfetti) {
+        setConfetti(true);
+        setTimeout(() => setConfetti(false), 2500);
+      }
+    },
+    [addNotif, toast, setCaptured, setConfetti],
+  );
 
-  const processOffer = useCallback(async (offer) => {
-    if (!offer?.id || processedOffersRef.current.has(offer.id)) {
-      return;
-    }
+  const processOffer = useCallback(
+    async (offer) => {
+      if (!offer?.id || processedOffersRef.current.has(offer.id)) {
+        return;
+      }
 
-    processedOffersRef.current.add(offer.id);
+      processedOffersRef.current.add(offer.id);
 
-    const result = calcScore(offer, prefs);
-    const scoredOffer = {
-      ...offer,
-      state: "done",
-      sc: result.s,
-      ok: result.s >= 60,
-    };
+      const result = calcScore(offer, prefs);
+      const scoredOffer = {
+        ...offer,
+        state: 'done',
+        sc: result.s,
+        ok: result.s >= 60,
+      };
 
-    mergeFeed([scoredOffer]);
+      mergeFeed([scoredOffer]);
 
-    if (prefs.auto) {
-      if (scoredOffer.ok) {
-        try {
-          const persisted = await captureOffer(scoredOffer, {
-            sessionId: monitorSessionIdRef.current,
-            source: "auto",
-          });
-          registerCapture({ ...scoredOffer, ...persisted }, { fromAuto: true });
-        } catch (error) {
-          setPending((previous) => appendUniqueById(previous, scoredOffer));
-          toast("Falha na captura", error.message || "Não foi possível capturar o plantão automaticamente.", "warning", "bot");
+      if (prefs.auto) {
+        if (scoredOffer.ok) {
+          try {
+            const persisted = await captureOffer(scoredOffer, {
+              sessionId: monitorSessionIdRef.current,
+              source: 'auto',
+            });
+            registerCapture({ ...scoredOffer, ...persisted }, { fromAuto: true });
+          } catch (error) {
+            setPending((previous) => appendUniqueById(previous, scoredOffer));
+            toast(
+              'Falha na captura',
+              error.message || 'Não foi possível capturar o plantão automaticamente.',
+              'warning',
+              'bot',
+            );
+          }
+        } else {
+          setRejected((previous) => appendUniqueById(previous, scoredOffer));
+          try {
+            await rejectOffer(scoredOffer, {
+              sessionId: monitorSessionIdRef.current,
+              reason: 'score_below_threshold',
+            });
+          } catch {
+            // Rejeição já refletida localmente.
+          }
         }
+        return;
+      }
+
+      if (scoredOffer.ok) {
+        setPending((previous) => appendUniqueById(previous, scoredOffer));
       } else {
         setRejected((previous) => appendUniqueById(previous, scoredOffer));
         try {
           await rejectOffer(scoredOffer, {
             sessionId: monitorSessionIdRef.current,
-            reason: "score_below_threshold",
+            reason: 'score_below_threshold',
           });
         } catch {
           // Rejeição já refletida localmente.
         }
       }
-      return;
-    }
+    },
+    [mergeFeed, prefs, registerCapture, toast, monitorSessionIdRef],
+  );
 
-    if (scoredOffer.ok) {
-      setPending((previous) => appendUniqueById(previous, scoredOffer));
-    } else {
-      setRejected((previous) => appendUniqueById(previous, scoredOffer));
-      try {
-        await rejectOffer(scoredOffer, {
-          sessionId: monitorSessionIdRef.current,
-          reason: "score_below_threshold",
-        });
-      } catch {
-        // Rejeição já refletida localmente.
-      }
-    }
-  }, [mergeFeed, prefs, registerCapture, toast, monitorSessionIdRef]);
+  const handleFeedItems = useCallback(
+    async (items) => {
+      const feedItems = items.map((item) => {
+        if (!item.isOffer) {
+          return {
+            ...item,
+            state: item.state || 'done',
+          };
+        }
 
-  const handleFeedItems = useCallback(async (items) => {
-    const feedItems = items.map((item) => {
-      if (!item.isOffer) {
         return {
           ...item,
-          state: item.state || "done",
+          state: item.state || 'scanning',
         };
-      }
+      });
 
-      return {
-        ...item,
-        state: item.state || "scanning",
-      };
-    });
+      mergeFeed(feedItems);
 
-    mergeFeed(feedItems);
-
-    const lastItem = feedItems[feedItems.length - 1];
-    if (setTyping && lastItem) {
+      const lastItem = feedItems[feedItems.length - 1];
+      if (setTyping && lastItem) {
         setTyping(lastItem.group);
         setTimeout(() => setTyping(null), 900);
-    }
-
-    for (const item of feedItems) {
-      if (item.isOffer) {
-        await processOffer(item);
       }
-    }
-  }, [mergeFeed, processOffer, setTyping]);
 
-  const acceptPending = useCallback(async (shift) => {
-    try {
-      const persisted = await captureOffer(shift, {
-        sessionId: monitorSessionIdRef.current,
-        source: "manual",
-      });
-      registerCapture({ ...shift, ...persisted }, { fromAuto: false });
-    } catch (error) {
-      toast("Falha ao aceitar", error?.message || "Não foi possível capturar este plantão.", "error", "manual");
-    }
-  }, [monitorSessionIdRef, registerCapture, toast]);
+      for (const item of feedItems) {
+        if (item.isOffer) {
+          await processOffer(item);
+        }
+      }
+    },
+    [mergeFeed, processOffer, setTyping],
+  );
 
-  const rejectPending = useCallback(async (shift) => {
-    try {
-      const persisted = await rejectOffer(shift, {
-        sessionId: monitorSessionIdRef.current,
-        reason: "manual_reject",
-      });
+  const acceptPending = useCallback(
+    async (shift) => {
+      try {
+        const persisted = await captureOffer(shift, {
+          sessionId: monitorSessionIdRef.current,
+          source: 'manual',
+        });
+        registerCapture({ ...shift, ...persisted }, { fromAuto: false });
+      } catch (error) {
+        toast(
+          'Falha ao aceitar',
+          error?.message || 'Não foi possível capturar este plantão.',
+          'error',
+          'manual',
+        );
+      }
+    },
+    [monitorSessionIdRef, registerCapture, toast],
+  );
 
-      const rejectedShift = persisted || shift;
-      setPending((previous) => previous.filter((item) => item.id !== shift.id));
-      setRejected((previous) => appendUniqueById(previous, rejectedShift));
-    } catch (error) {
-      toast("Falha ao rejeitar", error?.message || "Não foi possível rejeitar este plantão.", "error", "manual");
-    }
-  }, [monitorSessionIdRef, toast]);
+  const rejectPending = useCallback(
+    async (shift) => {
+      try {
+        const persisted = await rejectOffer(shift, {
+          sessionId: monitorSessionIdRef.current,
+          reason: 'manual_reject',
+        });
+
+        const rejectedShift = persisted || shift;
+        setPending((previous) => previous.filter((item) => item.id !== shift.id));
+        setRejected((previous) => appendUniqueById(previous, rejectedShift));
+      } catch (error) {
+        toast(
+          'Falha ao rejeitar',
+          error?.message || 'Não foi possível rejeitar este plantão.',
+          'error',
+          'manual',
+        );
+      }
+    },
+    [monitorSessionIdRef, toast],
+  );
 
   const loadInitialShifts = useCallback(async () => {
     try {
@@ -209,7 +245,11 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
   }, [setCaptured]);
 
   const clearAllHistory = useCallback(async () => {
-    if (!window.confirm("Limpar todo o histórico de plantões capturados? Esta ação não pode ser desfeita.")) {
+    if (
+      !window.confirm(
+        'Limpar todo o histórico de plantões capturados? Esta ação não pode ser desfeita.',
+      )
+    ) {
       return;
     }
 
@@ -220,9 +260,14 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
       setPending([]);
       setFeed([]);
       processedOffersRef.current = new Set();
-      toast("Histórico limpo", "Dados operacionais removidos com sucesso.", "info", "manual");
+      toast('Histórico limpo', 'Dados operacionais removidos com sucesso.', 'info', 'manual');
     } catch (error) {
-      toast("Falha ao limpar", error?.message || "Não foi possível limpar o histórico no backend.", "error", "manual");
+      toast(
+        'Falha ao limpar',
+        error?.message || 'Não foi possível limpar o histórico no backend.',
+        'error',
+        'manual',
+      );
     }
   }, [setCaptured, toast]);
 
@@ -232,10 +277,14 @@ export function useShifts({ prefs, monitorSessionIdRef, toast, addNotif, setConf
   }, []);
 
   return {
-    feed, setFeed,
-    captured, setCaptured,
-    rejected, setRejected,
-    pending, setPending,
+    feed,
+    setFeed,
+    captured,
+    setCaptured,
+    rejected,
+    setRejected,
+    pending,
+    setPending,
     handleFeedItems,
     acceptPending,
     rejectPending,

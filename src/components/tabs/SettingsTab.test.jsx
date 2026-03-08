@@ -4,7 +4,12 @@ import SettingsTab from './SettingsTab.jsx';
 
 vi.mock('../../services/whatsappApi.js', () => ({
   fetchWhatsappConfig: vi.fn().mockResolvedValue(null),
-  fetchWhatsappStatus: vi.fn().mockResolvedValue({ connected: false, connectedAt: null, instanceId: null, phoneNumber: null }),
+  fetchWhatsappStatus: vi.fn().mockResolvedValue({
+    connected: false,
+    connectedAt: null,
+    instanceId: null,
+    phoneNumber: null,
+  }),
   resetWhatsappToken: vi.fn(),
   buildWebhookUrl: vi.fn().mockReturnValue(''),
   connectWhatsapp: vi.fn(),
@@ -28,21 +33,23 @@ describe('SettingsTab', () => {
   it('updates acceptance mode and available days preferences', async () => {
     const setPrefs = vi.fn();
 
-    await act(async () => render(
-      <SettingsTab
-        uiV2
-        groups={baseGroups}
-        setGroups={vi.fn()}
-        prefs={basePrefs}
-        setPrefs={setPrefs}
-        name="Dr. Teste"
-        actG={baseGroups.filter((group) => group.active)}
-        setScreen={vi.fn()}
-        setObStep={vi.fn()}
-        onClearHistory={vi.fn()}
-        onLogout={vi.fn()}
-      />,
-    ));
+    await act(async () =>
+      render(
+        <SettingsTab
+          uiV2
+          groups={baseGroups}
+          setGroups={vi.fn()}
+          prefs={basePrefs}
+          setPrefs={setPrefs}
+          name="Dr. Teste"
+          actG={baseGroups.filter((group) => group.active)}
+          setScreen={vi.fn()}
+          setObStep={vi.fn()}
+          onClearHistory={vi.fn()}
+          onLogout={vi.fn()}
+        />,
+      ),
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Automático/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Ter' }));
@@ -55,21 +62,23 @@ describe('SettingsTab', () => {
   it('toggles monitored groups', async () => {
     const setGroups = vi.fn();
 
-    await act(async () => render(
-      <SettingsTab
-        uiV2
-        groups={baseGroups}
-        setGroups={setGroups}
-        prefs={basePrefs}
-        setPrefs={vi.fn()}
-        name="Dr. Teste"
-        actG={baseGroups.filter((group) => group.active)}
-        setScreen={vi.fn()}
-        setObStep={vi.fn()}
-        onClearHistory={vi.fn()}
-        onLogout={vi.fn()}
-      />,
-    ));
+    await act(async () =>
+      render(
+        <SettingsTab
+          uiV2
+          groups={baseGroups}
+          setGroups={setGroups}
+          prefs={basePrefs}
+          setPrefs={vi.fn()}
+          name="Dr. Teste"
+          actG={baseGroups.filter((group) => group.active)}
+          setScreen={vi.fn()}
+          setObStep={vi.fn()}
+          onClearHistory={vi.fn()}
+          onLogout={vi.fn()}
+        />,
+      ),
+    );
 
     fireEvent.click(screen.getByRole('switch', { name: 'Desativar Grupo A' }));
 

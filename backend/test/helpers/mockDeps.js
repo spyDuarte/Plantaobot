@@ -277,7 +277,6 @@ export function createMockDataStore() {
       whatsappMessages.set(userId, current);
     },
 
-
     async validateWebhookToken(userId, token) {
       const current = await this.getWhatsappConfig(userId);
       return current.webhookToken === token;
@@ -300,7 +299,10 @@ export function createMockDataStore() {
       });
     },
 
-    async saveWhatsappStatusTransition(userId, { connected, instanceId = null, phoneNumber = null }) {
+    async saveWhatsappStatusTransition(
+      userId,
+      { connected, instanceId = null, phoneNumber = null },
+    ) {
       const current = await this.getWhatsappConfig(userId);
       whatsappConfig.set(userId, {
         ...current,
@@ -384,8 +386,12 @@ export function createMockDataStore() {
 
     async isActiveGroupByJidOrName(userId, { jid, groupName } = {}) {
       const current = groups.get(userId) || [];
-      const normalizedJid = String(jid || '').trim().toLowerCase();
-      const normalizedGroupName = String(groupName || '').trim().toLowerCase();
+      const normalizedJid = String(jid || '')
+        .trim()
+        .toLowerCase();
+      const normalizedGroupName = String(groupName || '')
+        .trim()
+        .toLowerCase();
 
       if (!normalizedJid && !normalizedGroupName) {
         return false;
@@ -396,8 +402,12 @@ export function createMockDataStore() {
           return false;
         }
 
-        const groupId = String(group.id || '').trim().toLowerCase();
-        const name = String(group.name || '').trim().toLowerCase();
+        const groupId = String(group.id || '')
+          .trim()
+          .toLowerCase();
+        const name = String(group.name || '')
+          .trim()
+          .toLowerCase();
 
         if (normalizedJid && groupId === normalizedJid) {
           return true;
