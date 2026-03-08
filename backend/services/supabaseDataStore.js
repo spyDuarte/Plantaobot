@@ -512,6 +512,17 @@ export function createSupabaseDataStore(config) {
       assertNoError(error, 'Failed to clear captures.');
     },
 
+    async countCapturesSince(userId, since) {
+      const { count, error } = await client
+        .from('captures')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .gte('created_at', since);
+
+      assertNoError(error, 'Failed to count captures.');
+      return count ?? 0;
+    },
+
     async listRejections(userId) {
       const { data, error } = await client
         .from('rejections')

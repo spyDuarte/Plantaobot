@@ -728,6 +728,23 @@ export function createApp(options = {}) {
         );
       }
 
+      if (subscriptionService) {
+        const sub = await subscriptionService.getSubscription(req.auth.user.id);
+        const maxGroups = sub.limits?.maxGroups ?? null;
+        if (maxGroups !== null) {
+          const activeGroupCount = Array.isArray(payload.groups)
+            ? payload.groups.filter((g) => g.active).length
+            : 0;
+          if (activeGroupCount > maxGroups) {
+            throw createHttpError(
+              403,
+              'PLAN_LIMIT_EXCEEDED',
+              `Seu plano permite até ${maxGroups} grupo(s) ativo(s). Faça upgrade para monitorar mais grupos.`,
+            );
+          }
+        }
+      }
+
       const result = await dataStore.startMonitoring(req.auth.user.id, payload);
       res.json({ sessionId: result.sessionId, active: true });
     }),
@@ -777,6 +794,23 @@ export function createApp(options = {}) {
     '/api/captures',
     requireAuth({}, deps),
     asyncRoute(async (req, res) => {
+      if (subscriptionService) {
+        const sub = await subscriptionService.getSubscription(req.auth.user.id);
+        const maxPerMonth = sub.limits?.maxCapturesPerMonth ?? null;
+        if (maxPerMonth !== null) {
+          const now = new Date();
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+          const monthCount = await dataStore.countCapturesSince(req.auth.user.id, startOfMonth);
+          if (monthCount >= maxPerMonth) {
+            throw createHttpError(
+              403,
+              'PLAN_LIMIT_EXCEEDED',
+              `Limite de ${maxPerMonth} capturas/mês atingido. Faça upgrade para capturar mais plantões.`,
+            );
+          }
+        }
+      }
+
       const payload = validateOfferMutation(req.body);
       const item = await dataStore.addCapture(req.auth.user.id, payload);
       res.status(201).json({ item });
@@ -1067,13 +1101,13 @@ export function createApp(options = {}) {
     '/api/billing/checkout',
     requireAuth({}, deps),
     asyncRoute(async (req, res) => {
-      if (!stripeService || !subscriptionService) {
-        throw createHttpError(503, 'BILLING_UNAVAILABLE', 'Sistema de pagamento não configurado.');
-      }
-
       const planId = String(req.body?.planId || '');
       if (!['pro', 'premium'].includes(planId)) {
         throw createHttpError(422, 'INVALID_PLAN', 'Plano inválido. Use "pro" ou "premium".');
+      }
+
+      if (!stripeService || !subscriptionService) {
+        throw createHttpError(503, 'BILLING_UNAVAILABLE', 'Sistema de pagamento não configurado.');
       }
 
       const userId = req.auth.user.id;

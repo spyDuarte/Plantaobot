@@ -429,6 +429,52 @@ export function createMockDataStore() {
     async trackEvent() {
       return;
     },
+
+    async countCapturesSince(userId, since) {
+      ensureCollections(userId);
+      const sinceDate = new Date(since);
+      const userCaptures = captures.get(userId) || [];
+      return userCaptures.filter((item) => {
+        const d = new Date(item.created_at || 0);
+        return d >= sinceDate;
+      }).length;
+    },
+  };
+}
+
+/**
+ * Creates a mock subscription service for testing.
+ * @param {{ planId?: string, limits?: object }} overrides
+ */
+export function createMockSubscriptionService(overrides = {}) {
+  const FREE_LIMITS = {
+    maxGroups: 1,
+    maxCapturesPerMonth: 10,
+    autoCapture: false,
+    aiChat: false,
+    exportCsv: false,
+  };
+
+  const planId = overrides.planId || 'free';
+  const limits = overrides.limits || FREE_LIMITS;
+
+  return {
+    async getSubscription(_userId) {
+      return {
+        planId,
+        limits,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        stripeStatus: null,
+        currentPeriodEnd: null,
+      };
+    },
+
+    async ensureFreePlan(_userId) {},
+    async saveStripeCustomer(_opts) {},
+    async updateSubscription(_opts) {},
+    async handleStripeStatusChange(_opts) {},
+    async getUserIdByCustomer(_customerId) { return null; },
   };
 }
 
