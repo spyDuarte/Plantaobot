@@ -142,7 +142,7 @@ function toSlug(input) {
 
 function createReferralCode(name) {
   const seed = toSlug(name) || 'medico';
-  const randomSuffix = Math.random().toString(36).slice(2, 7);
+  const randomSuffix = crypto.randomUUID().split('-')[0];
   return `${seed}-${randomSuffix}`;
 }
 
