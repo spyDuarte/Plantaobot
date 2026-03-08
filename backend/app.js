@@ -31,6 +31,12 @@ import {
   normalizeIncomingWebhookStatus,
   parseShiftOffer,
 } from './services/whatsappParser.js';
+import {
+  createStripeService,
+  PLAN_IDS,
+  PLAN_METADATA,
+} from './services/stripeService.js';
+import { createSubscriptionService } from './services/subscriptionService.js';
 
 function defaultConfig() {
   const nodeEnv = process.env.NODE_ENV || 'development';
@@ -50,6 +56,8 @@ function defaultConfig() {
     corsAllowedOrigins: process.env.CORS_ALLOWED_ORIGINS || process.env.CORS_ALLOWED_ORIGIN || '',
     evolutionApiUrl: process.env.EVOLUTION_API_URL || '',
     evolutionApiKey: process.env.EVOLUTION_API_KEY || '',
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   };
 }
 
@@ -232,6 +240,85 @@ function applyCors(req, res, allowedOrigins) {
   return true;
 }
 
+/**
+ * Handles Stripe webhook events and updates subscription records accordingly.
+ * @param {object} event - Verified Stripe event object
+ * @param {{ stripeService: object, subscriptionService: object }} deps
+ */
+async function handleStripeEvent(event, { stripeService, subscriptionService }) {
+  const { type, data } = event;
+
+  if (type === 'checkout.session.completed') {
+    const session = data.object;
+    const userId = session.metadata?.userId;
+    const planId = session.metadata?.planId;
+    const subscriptionId = session.subscription;
+
+    if (!userId || !planId || !subscriptionId) {
+      console.warn('[stripe_webhook] checkout.session.completed: missing metadata', {
+        userId,
+        planId,
+        subscriptionId,
+      });
+      return;
+    }
+
+    const subscription = await stripeService.getSubscription(subscriptionId);
+    const currentPeriodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : null;
+
+    await subscriptionService.updateSubscription({
+      userId,
+      planId,
+      stripeSubscriptionId: subscriptionId,
+      stripeStatus: subscription.status,
+      currentPeriodEnd,
+      stripeCustomerId: String(session.customer || ''),
+    });
+
+    console.info('[stripe_webhook] subscription activated', { userId, planId });
+    return;
+  }
+
+  if (
+    type === 'customer.subscription.updated' ||
+    type === 'customer.subscription.deleted'
+  ) {
+    const subscription = data.object;
+    const currentPeriodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : null;
+
+    await subscriptionService.handleStripeStatusChange({
+      stripeSubscriptionId: subscription.id,
+      stripeStatus: subscription.status,
+      currentPeriodEnd,
+    });
+
+    console.info('[stripe_webhook] subscription status changed', {
+      id: subscription.id,
+      status: subscription.status,
+    });
+    return;
+  }
+
+  if (type === 'invoice.payment_failed') {
+    const invoice = data.object;
+    const subscriptionId = invoice.subscription;
+    if (subscriptionId) {
+      await subscriptionService.handleStripeStatusChange({
+        stripeSubscriptionId: String(subscriptionId),
+        stripeStatus: 'past_due',
+      });
+      console.info('[stripe_webhook] invoice.payment_failed', { subscriptionId });
+    }
+    return;
+  }
+
+  // Unhandled event types are silently ignored
+}
+
 export function createApp(options = {}) {
   const config = {
     ...defaultConfig(),
@@ -243,12 +330,18 @@ export function createApp(options = {}) {
   const whatsappProvider =
     options.whatsappProvider ||
     (config.evolutionApiUrl && config.evolutionApiKey ? createWhatsappProvider(config) : null);
+  const stripeService = options.stripeService || (config.stripeSecretKey ? createStripeService() : null);
+  const subscriptionService =
+    options.subscriptionService ||
+    (config.supabaseUrl && config.supabaseServiceRoleKey ? createSubscriptionService(config) : null);
 
   const deps = {
     config,
     authService,
     dataStore,
     whatsappProvider,
+    stripeService,
+    subscriptionService,
   };
 
   const app = express();
@@ -279,6 +372,40 @@ export function createApp(options = {}) {
 
     next();
   });
+
+  // ─── Stripe Webhook (must be before express.json — needs raw body) ───────────
+  // This route is CSRF-exempt and authenticated exclusively by Stripe signature.
+  app.post(
+    '/api/billing/webhook',
+    express.raw({ type: 'application/json' }),
+    asyncRoute(async (req, res) => {
+      if (!stripeService || !subscriptionService) {
+        return res.status(200).json({ received: true });
+      }
+
+      const signature = req.headers['stripe-signature'];
+      if (!signature) {
+        return res.status(400).json({ error: 'Missing stripe-signature header.' });
+      }
+
+      let event;
+      try {
+        event = await stripeService.constructWebhookEvent({ rawBody: req.body, signature });
+      } catch (err) {
+        console.warn('[stripe_webhook] signature verification failed', err.message);
+        return res.status(400).json({ error: 'Webhook signature verification failed.' });
+      }
+
+      try {
+        await handleStripeEvent(event, { stripeService, subscriptionService });
+      } catch (err) {
+        console.error('[stripe_webhook] event handler error', err.message);
+      }
+
+      res.json({ received: true });
+    }),
+  );
+  // ─────────────────────────────────────────────────────────────────────────────
 
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser(config.cookieSecret || undefined));
@@ -906,6 +1033,95 @@ export function createApp(options = {}) {
       res.json({ reply: data.content?.[0]?.text || '' });
     }),
   );
+
+  // ─── Billing / Subscriptions ─────────────────────────────────────────────────
+
+  // GET /api/billing/plans — public: list all available plans and prices
+  app.get('/api/billing/plans', (_req, res) => {
+    res.json({ plans: Object.values(PLAN_METADATA) });
+  });
+
+  // GET /api/billing/subscription — returns current user's plan and limits
+  app.get(
+    '/api/billing/subscription',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      if (!subscriptionService) {
+        return res.json({
+          planId: PLAN_IDS.free,
+          limits: PLAN_METADATA.free,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          stripeStatus: null,
+          currentPeriodEnd: null,
+        });
+      }
+
+      const subscription = await subscriptionService.getSubscription(req.auth.user.id);
+      res.json(subscription);
+    }),
+  );
+
+  // POST /api/billing/checkout — creates a Stripe Checkout session for a paid plan
+  app.post(
+    '/api/billing/checkout',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      if (!stripeService || !subscriptionService) {
+        throw createHttpError(503, 'BILLING_UNAVAILABLE', 'Sistema de pagamento não configurado.');
+      }
+
+      const planId = String(req.body?.planId || '');
+      if (!['pro', 'premium'].includes(planId)) {
+        throw createHttpError(422, 'INVALID_PLAN', 'Plano inválido. Use "pro" ou "premium".');
+      }
+
+      const userId = req.auth.user.id;
+      const email = req.auth.user.email;
+      const name = req.auth.user?.user_metadata?.name || '';
+
+      const { customerId } = await stripeService.getOrCreateCustomer({ userId, email, name });
+      await subscriptionService.saveStripeCustomer({ userId, stripeCustomerId: customerId });
+
+      const { url, sessionId } = await stripeService.createCheckoutSession({
+        userId,
+        email,
+        planId,
+        customerId,
+      });
+
+      res.json({ url, sessionId });
+    }),
+  );
+
+  // POST /api/billing/portal — creates a Stripe Customer Portal session
+  app.post(
+    '/api/billing/portal',
+    requireAuth({}, deps),
+    asyncRoute(async (req, res) => {
+      if (!stripeService || !subscriptionService) {
+        throw createHttpError(503, 'BILLING_UNAVAILABLE', 'Sistema de pagamento não configurado.');
+      }
+
+      const subscription = await subscriptionService.getSubscription(req.auth.user.id);
+
+      if (!subscription.stripeCustomerId) {
+        throw createHttpError(
+          409,
+          'NO_STRIPE_CUSTOMER',
+          'Você não possui uma assinatura ativa para gerenciar.',
+        );
+      }
+
+      const { url } = await stripeService.createPortalSession({
+        customerId: subscription.stripeCustomerId,
+      });
+
+      res.json({ url });
+    }),
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────────
 
   app.use((error, _req, res, _next) => {
     const normalized = isHttpError(error)
