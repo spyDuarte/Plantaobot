@@ -290,7 +290,7 @@ export default function AppMain({ onLogout = null }) {
     setTyping,
   });
 
-  const { planId, refresh: refreshPlan } = usePlan();
+  const { planId, limits: planLimits, refresh: refreshPlan } = usePlan();
 
   const {
     botOn,
@@ -764,6 +764,8 @@ export default function AppMain({ onLogout = null }) {
         prefs={prefs}
         typing={typing}
         setModal={setModal}
+        planId={planId}
+        planLimits={planLimits}
       />
     ),
     feed: (

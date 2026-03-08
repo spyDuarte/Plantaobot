@@ -38,6 +38,13 @@ function StatCard({ label, value, tone = 'info' }) {
   );
 }
 
+const PLAN_LABELS = { free: 'Grátis', pro: 'Pro', premium: 'Premium' };
+const PLAN_BADGE_COLORS = {
+  free: { bg: C.surface2, color: C.text2, border: C.border },
+  pro: { bg: C.primarySoft, color: C.primary, border: C.primarySoft },
+  premium: { bg: C.accentSoft, color: C.accent, border: C.accentSoft },
+};
+
 export default function Dashboard({
   uiV2,
   setTab,
@@ -52,6 +59,8 @@ export default function Dashboard({
   prefs,
   typing,
   setModal,
+  planId,
+  planLimits,
 }) {
   const action = (
     <Button
@@ -114,6 +123,68 @@ export default function Dashboard({
         <StatCard label="Pendentes" value={pending.length} tone="warning" />
         <StatCard label="Descartados" value={rejected.length} tone="error" />
       </div>
+
+      {planId ? (() => {
+        const currentPlan = planId || 'free';
+        const colors = PLAN_BADGE_COLORS[currentPlan] || PLAN_BADGE_COLORS.free;
+        const maxCaptures = planLimits?.maxCapturesPerMonth ?? null;
+        const capturedCount = captured.length;
+        return (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '12px 16px',
+              borderRadius: 8,
+              border: `1px solid ${colors.border}`,
+              background: colors.bg,
+              marginBottom: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: colors.color,
+                  padding: '2px 10px',
+                  borderRadius: 20,
+                  border: `1px solid ${colors.color}`,
+                }}
+              >
+                {PLAN_LABELS[currentPlan] || currentPlan}
+              </span>
+              {maxCaptures !== null ? (
+                <span style={{ fontSize: 13, color: C.text2 }}>
+                  {capturedCount} / {maxCaptures} capturas este mês
+                </span>
+              ) : (
+                <span style={{ fontSize: 13, color: C.text2 }}>Capturas ilimitadas</span>
+              )}
+            </div>
+            {currentPlan === 'free' && setTab ? (
+              <button
+                type="button"
+                onClick={() => setTab('plans')}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: C.primary,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  textDecoration: 'underline',
+                }}
+              >
+                Fazer upgrade →
+              </button>
+            ) : null}
+          </div>
+        );
+      })() : null}
 
       <div
         style={{
