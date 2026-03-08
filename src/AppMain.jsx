@@ -45,6 +45,8 @@ import { trackGrowthEvent } from './services/growthApi.js';
 import { fetchWhatsappStatus } from './services/whatsappApi.js';
 import { useMonitoring } from './hooks/useMonitoring.js';
 import { useShifts } from './hooks/useShifts.js';
+import { usePlan } from './hooks/usePlan.js';
+import PlansTab from './components/tabs/PlansTab.jsx';
 
 const DEFAULT_PREFS = {
   minVal: 1500,
@@ -287,6 +289,8 @@ export default function AppMain({ onLogout = null }) {
     setConfetti,
     setTyping,
   });
+
+  const { planId, limits: planLimits, refresh: refreshPlan } = usePlan();
 
   const {
     botOn,
@@ -725,6 +729,13 @@ export default function AppMain({ onLogout = null }) {
       }),
       createNavItem({ key: 'ai', icon: 'AI', label: 'Assistente', badgeCount: 0, route: '/ai' }),
       createNavItem({
+        key: 'plans',
+        icon: planId === 'free' ? '🆙' : '★',
+        label: 'Planos',
+        badgeCount: planId === 'free' ? 1 : 0,
+        route: '/plans',
+      }),
+      createNavItem({
         key: 'settings',
         icon: 'CFG',
         label: 'Configuracoes',
@@ -732,7 +743,7 @@ export default function AppMain({ onLogout = null }) {
         route: '/settings',
       }),
     ],
-    [feed.length, prefs.auto, captured.length, pending.length],
+    [feed.length, prefs.auto, captured.length, pending.length, planId],
   );
 
   const activeTab = tabs.some((item) => item.key === tab) ? tab : 'dashboard';
@@ -813,6 +824,13 @@ export default function AppMain({ onLogout = null }) {
           showHeader={false}
         />
       </Card>
+    ),
+    plans: (
+      <PlansTab
+        uiV2={true}
+        planId={planId}
+        onPlanChange={refreshPlan}
+      />
     ),
     settings: (
       <SettingsTab
